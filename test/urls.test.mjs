@@ -3,8 +3,7 @@ import { test } from "node:test";
 import { appPath, bareId, parseAppUrl } from "../out/urls.js";
 import { ProofHubClient } from "../out/client.js";
 
-const REAL =
-  "https://acme.proofhub.com/bapplite/#app/todos/project-8557549576/list-271272987407";
+const REAL = "https://acme.proofhub.com/bapplite/#app/todos/project-8557549576/list-271272987407";
 
 test("a list url is rebuilt exactly as the ProofHub app writes it", () => {
   const client = new ProofHubClient({ account: "acme.proofhub.com", apiKey: "k" });

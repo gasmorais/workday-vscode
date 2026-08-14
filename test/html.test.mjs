@@ -4,7 +4,7 @@ import { decodeEntities, firstLine, plainText, richText } from "../out/html.js";
 
 const REAL = `&lt;div&gt;Seguem links necess&amp;aacute;rios para o pagamento ao fornecedor:&lt;/div&gt;
 &lt;ul&gt;
-&lt;li&gt;formul&amp;aacute;rio de solicita&amp;ccedil;&amp;atilde;o --&amp;gt; &lt;a href="https://example.sharepoint.com/:x:/g/personal/x/Ev"&gt;Modelo_Solicita&amp;ccedil;&amp;atilde;odePagamento.xlsx&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;formul&amp;aacute;rio de solicita&amp;ccedil;&amp;atilde;o --&amp;gt; &lt;a href="https://example.sharepoint.com/:x:/g/personal/x/Ev?e=Xaib8m"&gt;Modelo_Solicita&amp;ccedil;&amp;atilde;odePagamento.xlsx&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;NF do fornecedor --&amp;gt;&amp;nbsp;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;div&gt;att,&lt;/div&gt;
@@ -25,11 +25,9 @@ test("a estrutura vira lista e parágrafos de verdade", () => {
   assert.ok(html.includes("<p>att,</p>"));
 });
 
-test("o link do sharepoint continua clicável", () => {
+test("o link externo continua clicável", () => {
   const html = richText(REAL);
-  assert.ok(
-    html.includes('<a href="https://example.sharepoint.com/:x:/g/personal/x/Ev"'),
-  );
+  assert.ok(html.includes('<a href="https://example.sharepoint.com/:x:/g/personal/x/Ev?e=Xaib8m"'));
   assert.ok(html.includes("Modelo_Solicitação"));
 });
 
