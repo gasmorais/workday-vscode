@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { ProofHubClient, ProofHubError, looksLikeKey, normalizeAccount } from "./client.js";
 import { personName, type Person } from "./types.js";
 import { watchClipboardForKey } from "./key-watch.js";
+import { t } from "./strings.js";
 
 const SECRET_PREFIX = "proofhub.apiKey";
 
@@ -56,8 +57,8 @@ export async function connect(
 
   if (options.askAccount || !configured) {
     const answer = await vscode.window.showInputBox({
-      title: "ProofHub account",
-      prompt: "The host of your ProofHub account",
+      title: t.connect.accountTitle,
+      prompt: t.connect.accountPrompt,
       placeHolder: "acme.proofhub.com",
       value: configured,
       ignoreFocusOut: true,
@@ -66,7 +67,7 @@ export async function connect(
           normalizeAccount(value);
           return undefined;
         } catch {
-          return "Enter a host such as acme.proofhub.com";
+          return t.connect.accountInvalid;
         }
       },
     });
@@ -79,38 +80,38 @@ export async function connect(
   }
 
   const proceed = await vscode.window.showInformationMessage(
-    `Connect to ${account}`,
+    t.connect.title(account),
     {
       modal: true,
       detail:
-        "ProofHub has no OAuth, so the key is copied once. The browser opens on the API access page: copy the key there and come back. VS Code watches the clipboard and connects on its own, with nothing to paste here.",
+        t.connect.detail,
     },
-    "Open ProofHub and wait for the key",
-    "Paste the key myself",
-    "Change account",
+    t.connect.openBrowser,
+    t.connect.pasteMyself,
+    t.connect.changeAccount,
   );
   if (!proceed) {
     return undefined;
   }
-  if (proceed === "Change account") {
+  if (proceed === t.connect.changeAccount) {
     return connect(context, { askAccount: true });
   }
 
   let person: Person | undefined;
   let apiKey: string | undefined;
 
-  if (proceed === "Open ProofHub and wait for the key") {
+  if (proceed === t.connect.openBrowser) {
     const baseline = (await vscode.env.clipboard.readText()).trim();
     await vscode.env.openExternal(vscode.Uri.parse(apiPageUrl(account)));
 
     const captured = await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "Waiting for the ProofHub key",
+        title: t.connect.waiting,
         cancellable: true,
       },
       async (progress, token) => {
-        progress.report({ message: "Copy the key in the browser" });
+        progress.report({ message: t.connect.waitingHint });
         return watchClipboardForKey({
           readClipboard: () => Promise.resolve(vscode.env.clipboard.readText()),
           validate: async (candidate) => {
@@ -138,8 +139,8 @@ export async function connect(
       apiKey = captured.key;
     } else {
       const retry = await vscode.window.showWarningMessage(
-        "No valid key showed up in the clipboard.",
-        "Paste it myself",
+        t.connect.notFound,
+        t.connect.tryPaste,
       );
       if (!retry) {
         return undefined;
@@ -150,12 +151,12 @@ export async function connect(
   if (!apiKey) {
     const clipboard = (await vscode.env.clipboard.readText()).trim();
     const typed = await vscode.window.showInputBox({
-      title: `Connect to ${account}`,
-      prompt: "Paste the API key from the API access dialog",
+      title: t.connect.title(account),
+      prompt: t.connect.keyPrompt,
       value: looksLikeKey(clipboard) ? clipboard : "",
       password: true,
       ignoreFocusOut: true,
-      validateInput: (value) => (value.trim() ? undefined : "The key cannot be empty"),
+      validateInput: (value) => (value.trim() ? undefined : t.connect.keyEmpty),
     });
     if (!typed) {
       return undefined;
@@ -163,11 +164,11 @@ export async function connect(
     apiKey = typed.trim();
     try {
       person = await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: `Checking the key for ${account}` },
+        { location: vscode.ProgressLocation.Notification, title: t.connect.checking(account) },
         () => buildClient(account, apiKey!).me(),
       );
     } catch (error) {
-      const retry = await vscode.window.showErrorMessage(describeFailure(error), "Try again");
+      const retry = await vscode.window.showErrorMessage(describeFailure(error), t.connect.retry);
       return retry ? connect(context, options) : undefined;
     }
   }
@@ -179,7 +180,7 @@ export async function connect(
   }
 
   vscode.window.showInformationMessage(
-    person ? `ProofHub connected as ${personName(person)}.` : "ProofHub connected.",
+    person ? t.connect.connectedAs(personName(person)) : t.connect.connected,
   );
   return { account, apiKey, client: buildClient(account, apiKey) };
 }
@@ -194,14 +195,14 @@ export async function disconnect(context: vscode.ExtensionContext): Promise<void
   if (configured) {
     await context.secrets.delete(secretKey(normalizeAccount(configured)));
   }
-  vscode.window.showInformationMessage("ProofHub key removed from this machine.");
+  vscode.window.showInformationMessage(t.connect.removed);
 }
 
 export function describeFailure(error: unknown): string {
   if (error instanceof ProofHubError) {
     return error.isAuthFailure
-      ? "ProofHub rejected the key. Run ProofHub: Connect to paste a new one."
-      : `ProofHub error ${error.status}: ${error.message}`;
+      ? t.connect.rejected
+      : t.connect.failure(error.status, error.message);
   }
   return error instanceof Error ? error.message : String(error);
 }

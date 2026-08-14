@@ -1,7 +1,12 @@
 import * as vscode from "vscode";
 import type { Session } from "./auth.js";
 import { describeFailure } from "./auth.js";
-import type { Project, Task, Todolist } from "./types.js";
+import type { Person, Project, Task, Todolist } from "./types.js";
+import { personName } from "./types.js";
+import { applyFilter, EMPTY_FILTER, sortTasks, type SortKey, type TaskFilter } from "./filter.js";
+import { firstLine } from "./html.js";
+import { formatMinutes, toDate } from "./format.js";
+import { t } from "./strings.js";
 
 export type Node =
   | { kind: "project"; project: Project }
@@ -13,10 +18,37 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
   readonly onDidChangeTreeData = this.changed.event;
   private session: Session | undefined;
   private readonly cache = new Map<string, Node[]>();
+  private names = new Map<string, string>();
+  filter: TaskFilter = { ...EMPTY_FILTER };
+  sort: SortKey = "list";
 
   setSession(session: Session | undefined): void {
     this.session = session;
+    this.names = new Map();
+    this.filter = { ...EMPTY_FILTER };
     this.refresh();
+  }
+
+  setFilter(filter: TaskFilter): void {
+    this.filter = filter;
+    this.refresh();
+  }
+
+  setSort(sort: SortKey): void {
+    this.sort = sort;
+    this.refresh();
+  }
+
+  nameOf(id: string): string {
+    return this.names.get(String(id)) ?? String(id);
+  }
+
+  private async loadNames(): Promise<void> {
+    if (this.names.size > 0 || !this.session) {
+      return;
+    }
+    const people: Person[] = await this.session.client.people().catch(() => []);
+    this.names = new Map(people.map((person) => [String(person.id), personName(person)]));
   }
 
   refresh(node?: Node): void {
@@ -66,8 +98,14 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
         item.id = `task:${node.todolist.id}:${node.task.id}`;
         item.contextValue = "task";
         item.iconPath = new vscode.ThemeIcon(node.task.completed ? "pass-filled" : "circle-large-outline");
-        item.description = taskDescription(node.task);
-        item.tooltip = node.task.description;
+        item.description = taskDescription(node.task, (id) => this.nameOf(id));
+        item.tooltip = taskTooltip(node);
+        if (isOverdue(node.task)) {
+          item.iconPath = new vscode.ThemeIcon(
+            "circle-large-outline",
+            new vscode.ThemeColor("charts.red"),
+          );
+        }
         item.command = {
           command: "proofhub.openTask",
           title: "Open Task",
@@ -109,7 +147,12 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
         return children;
       }
       if (node.kind === "todolist") {
-        const tasks = await client.tasks(node.project.id, node.todolist.id);
+        await this.loadNames();
+        if (this.filter.mine && !this.filter.meId) {
+          this.filter.meId = String((await client.me().catch(() => undefined))?.id ?? "");
+        }
+        const all = await client.tasks(node.project.id, node.todolist.id);
+        const tasks = sortTasks(applyFilter(all, this.filter), this.sort);
         const children: Node[] = tasks.map((task) => ({
           kind: "task",
           project: node.project,
@@ -138,13 +181,51 @@ function cacheKey(node: Node): string {
   }
 }
 
-function taskDescription(task: Task): string {
+function taskDescription(task: Task, nameOf: (id: string) => string): string {
   const parts: string[] = [];
   if (task.due_date) {
-    parts.push(task.due_date);
+    parts.push(isOverdue(task) ? `⚑ ${task.due_date}` : task.due_date);
+  }
+  const people = (task.assigned ?? []).map((id) => initials(nameOf(String(id))));
+  if (people.length > 0) {
+    parts.push(people.join(" "));
   }
   if (task.sub_tasks) {
-    parts.push(`${task.sub_tasks} subtasks`);
+    parts.push(t.tree.subtasks(task.sub_tasks));
   }
-  return parts.join("  ");
+  const estimate = (task.estimated_hours ?? 0) * 60 + (task.estimated_mins ?? 0);
+  if (estimate > 0) {
+    parts.push(formatMinutes(estimate));
+  }
+  return parts.join("  ·  ");
+}
+
+function taskTooltip(node: Node & { kind: "task" }): vscode.MarkdownString {
+  const text = new vscode.MarkdownString();
+  text.appendMarkdown(`**${node.task.title}**\n\n`);
+  text.appendMarkdown(`${node.project.title} › ${node.todolist.title}\n\n`);
+  const summary = firstLine(node.task.description ?? "", 240);
+  if (summary) {
+    text.appendMarkdown(summary);
+  }
+  return text;
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return "";
+  }
+  const first = parts[0][0] ?? "";
+  const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? "") : "";
+  return `${first}${last}`.toUpperCase();
+}
+
+function isOverdue(task: Task): boolean {
+  const due = toDate(task.due_date);
+  if (task.completed || !due) {
+    return false;
+  }
+  const now = new Date();
+  return due.getTime() < Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 }

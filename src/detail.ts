@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { describeFailure, type Session } from "./auth.js";
-import { renderBody, type TaskView } from "./render.js";
+import { renderBody, type TaskView } from "./components/sections.js";
+import { t } from "./strings.js";
+import { page } from "./components/shell.js";
 import type { Node } from "./tree.js";
 import { personName, type Person, type TimeEntry } from "./types.js";
 import { today } from "./time.js";
@@ -62,7 +64,7 @@ export class TaskDetail {
     }
     const { client } = session;
     const { project, todolist, task } = node;
-    this.panel.webview.html = this.shell("<p class=\"empty\">Loading…</p>");
+    this.panel.webview.html = this.shell(`<p class="empty">${t.common.loading}</p>`);
 
     try {
       const [fresh, subtasks, comments, time] = await Promise.all([
@@ -89,7 +91,7 @@ export class TaskDetail {
       this.panel.webview.html = this.shell(renderBody(view));
     } catch (error) {
       this.panel.webview.html = this.shell(
-        `<p class="empty">${describeFailure(error)}</p><p class="actions"><button data-act="refresh">Try again</button></p>`,
+        `<p class="empty">${describeFailure(error)}</p><p class="actions"><button data-act="refresh">${t.common.tryAgain}</button></p>`,
       );
     }
   }
@@ -170,12 +172,12 @@ export class TaskDetail {
         case "time": {
           const hours = fields.hours?.trim();
           if (!hours || !/^\d{1,3}:[0-5]\d$/.test(hours)) {
-            vscode.window.showWarningMessage("Use H:MM for the hours.");
+            vscode.window.showWarningMessage(t.time.hoursInvalid);
             return;
           }
           const sheets = await client.timesheets(project.id);
           if (sheets.length === 0) {
-            vscode.window.showWarningMessage("This project has no timesheet to log time into.");
+            vscode.window.showWarningMessage(t.time.noTimesheet);
             return;
           }
           await client.logTime(project.id, sheets[0].id, {
@@ -198,62 +200,7 @@ export class TaskDetail {
   }
 
   private shell(body: string): string {
-    const nonce = String(Date.now()) + String(process.hrtime.bigint());
-    const csp = `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-    return `<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="${csp}">
-<style>${STYLE}</style></head><body>${body}
-<script nonce="${nonce}">${SCRIPT}</script></body></html>`;
+    return page(body);
   }
 }
 
-const STYLE = `
-body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); padding: 0 16px 32px; }
-h1 { font-size: 1.35em; margin: 4px 0 8px; }
-h1.done { text-decoration: line-through; opacity: .65; }
-h2 { font-size: .85em; text-transform: uppercase; letter-spacing: .07em; opacity: .7; margin: 22px 0 8px; border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 4px; }
-.crumbs { opacity: .65; margin: 12px 0 0; font-size: .9em; }
-.chip { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: .8em; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
-.chip.ok { background: var(--vscode-testing-iconPassed); color: var(--vscode-editor-background); }
-.count { opacity: .8; font-weight: normal; }
-.meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 6px 0; }
-.actions { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; }
-button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 4px 11px; border-radius: 2px; cursor: pointer; }
-button:hover { background: var(--vscode-button-hoverBackground); }
-input, textarea { background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, transparent); padding: 4px 6px; border-radius: 2px; font-family: inherit; font-size: inherit; }
-form { display: flex; gap: 6px; margin-top: 10px; align-items: flex-start; }
-form input[name=title], form input[name=description], form textarea { flex: 1; }
-.list { list-style: none; margin: 0; padding: 0; }
-.list li { padding: 6px 0; border-bottom: 1px solid var(--vscode-panel-border); display: flex; gap: 8px; align-items: baseline; }
-.list li span.done { text-decoration: line-through; opacity: .65; }
-.list label { display: flex; gap: 8px; align-items: baseline; flex: 1; cursor: pointer; }
-.list.comments li { display: block; }
-.who { margin: 0 0 3px; font-weight: 600; font-size: .9em; }
-.hours { font-variant-numeric: tabular-nums; min-width: 48px; }
-.prose { white-space: normal; line-height: 1.5; }
-.empty { opacity: .6; font-style: italic; margin: 6px 0; }
-`;
-
-const SCRIPT = `
-const vs = acquireVsCodeApi();
-document.addEventListener('click', (e) => {
-  const button = e.target.closest('button[data-act]');
-  if (button) { vs.postMessage({ act: button.dataset.act }); }
-});
-document.addEventListener('change', (e) => {
-  const box = e.target.closest('input[data-subtask]');
-  if (box) { vs.postMessage({ act: 'toggleSubtask', id: box.dataset.subtask, value: box.checked }); }
-});
-document.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const form = e.target;
-  const value = Object.fromEntries(new FormData(form).entries());
-  vs.postMessage({ act: form.dataset.form, value });
-});
-document.addEventListener('keydown', (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-    const form = e.target.closest('form');
-    if (form) { form.requestSubmit(); }
-  }
-});
-`;

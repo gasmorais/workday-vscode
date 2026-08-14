@@ -57,6 +57,7 @@ export interface TimeEntry {
   logged_date?: string;
   billable?: boolean;
   task_id?: string;
+  created_by?: string;
 }
 
 export function personName(person: Person): string {

@@ -3,9 +3,12 @@ import { connect, describeFailure, disconnect, restoreSession, type Session } fr
 import { ProjectsProvider, type Node } from "./tree.js";
 import { Timer } from "./timer.js";
 import { formatDuration, today } from "./time.js";
-import { personName, type Task } from "./types.js";
 import { parseAppUrl } from "./urls.js";
+import { t } from "./strings.js";
 import { TaskDetail } from "./detail.js";
+import { ReportPanel } from "./report-panel.js";
+import { createTask as runCreateTask } from "./flows/create-task.js";
+import { EMPTY_FILTER, isActive, type SortKey } from "./filter.js";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const provider = new ProjectsProvider();
@@ -25,11 +28,35 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     openInBrowser: (node) => vscode.commands.executeCommand("proofhub.openInBrowser", node),
   });
 
+  const report = new ReportPanel(() => session);
+
+  const showFilter = () => {
+    const parts: string[] = [];
+    if (provider.filter.text.trim()) {
+      parts.push(`"${provider.filter.text.trim()}"`);
+    }
+    if (provider.filter.mine) {
+      parts.push(t.filter.mine.toLowerCase());
+    }
+    if (provider.filter.hideCompleted) {
+      parts.push(t.filter.hideCompleted.toLowerCase());
+    }
+    if (provider.filter.overdueOnly) {
+      parts.push(t.filter.overdue.toLowerCase());
+    }
+    view.description = isActive(provider.filter) ? t.filter.active(parts.join(", ")) : undefined;
+    void vscode.commands.executeCommand(
+      "setContext",
+      "proofhub.filtering",
+      isActive(provider.filter),
+    );
+  };
+
   const requireSession = async (): Promise<Session | undefined> => {
     if (session) {
       return session;
     }
-    vscode.window.showWarningMessage("Connect to ProofHub first.");
+    vscode.window.showWarningMessage(t.common.connectFirst);
     return undefined;
   };
 
@@ -132,12 +159,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
     const clipboard = (await vscode.env.clipboard.readText()).trim();
     const input = await vscode.window.showInputBox({
-      title: "Open a ProofHub link",
-      prompt: "Paste a ProofHub URL to reveal it in the tree",
+      title: t.link.title,
+      prompt: t.link.prompt,
       value: parseAppUrl(clipboard) ? clipboard : "",
       ignoreFocusOut: true,
       validateInput: (value) =>
-        !value.trim() || parseAppUrl(value) ? undefined : "That is not a ProofHub link",
+        !value.trim() || parseAppUrl(value) ? undefined : t.link.invalid,
     });
     if (!input) {
       return;
@@ -148,18 +175,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
     if (location.host !== active.client.accountHost) {
       vscode.window.showWarningMessage(
-        `That link belongs to ${location.host}, but you are connected to ${active.client.accountHost}.`,
+        t.link.otherAccount(location.host, active.client.accountHost),
       );
       return;
     }
 
     await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: "Looking up the link" },
+      { location: vscode.ProgressLocation.Notification, title: t.link.looking },
       async () => {
         const projects = await active.client.projects(true);
         const project = projects.find((candidate) => idMatches(candidate.id, location.projectId));
         if (!project) {
-          vscode.window.showWarningMessage("That project is not visible with your key.");
+          vscode.window.showWarningMessage(t.link.unknownProject);
           return;
         }
         if (!location.todolistId) {
@@ -183,50 +210,97 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     const target = node ?? (view.selection[0] as Node | undefined);
-    if (!target || target.kind === "project") {
-      vscode.window.showWarningMessage("Select a todolist to create the task in.");
+    const known =
+      target?.kind === "todolist"
+        ? { project: target.project, todolist: target.todolist }
+        : target?.kind === "task"
+          ? { project: target.project, todolist: target.todolist }
+          : target?.kind === "project"
+            ? { project: target.project }
+            : undefined;
+
+    const created = await runCreateTask(active, known);
+    if (!created) {
       return;
     }
-    const { project, todolist } = target;
-
-    const title = await vscode.window.showInputBox({
-      title: `New task in ${todolist.title}`,
-      prompt: "Task title",
-      ignoreFocusOut: true,
-      validateInput: (value) => (value.trim() ? undefined : "The title cannot be empty"),
+    provider.refresh({
+      kind: "todolist",
+      project: created.target.project,
+      todolist: created.target.todolist,
     });
-    if (!title) {
-      return;
-    }
-
-    const people = await active.client.people();
-    const picked = await vscode.window.showQuickPick(
-      [
-        { label: "Nobody", id: undefined as string | undefined },
-        ...people.map((person) => ({ label: personName(person), id: person.id })),
-      ],
-      { title: "Assign to", ignoreFocusOut: true },
+    vscode.window.showInformationMessage(
+      t.task.created(`${created.target.project.title} › ${created.target.todolist.title}`),
     );
+  });
 
-    const due = await vscode.window.showInputBox({
-      title: "Due date",
-      prompt: "YYYY-MM-DD, or leave empty",
+  command("proofhub.report", async () => {
+    if (await requireSession()) {
+      await report.show();
+    }
+  });
+
+  command("proofhub.search", async () => {
+    const answer = await vscode.window.showInputBox({
+      title: t.filter.search,
+      prompt: t.filter.searchPrompt,
+      value: provider.filter.text,
       ignoreFocusOut: true,
-      validateInput: (value) =>
-        !value.trim() || /^\d{4}-\d{2}-\d{2}$/.test(value.trim()) ? undefined : "Use YYYY-MM-DD",
     });
-
-    const payload: Partial<Task> = { title: title.trim() };
-    if (picked?.id) {
-      payload.assigned = [picked.id];
+    if (answer === undefined) {
+      return;
     }
-    if (due?.trim()) {
-      payload.due_date = due.trim();
-    }
+    provider.setFilter({ ...provider.filter, text: answer });
+    showFilter();
+  });
 
-    await active.client.createTask(project.id, todolist.id, payload);
-    provider.refresh(target.kind === "todolist" ? target : provider.getParent(target));
-    vscode.window.showInformationMessage(`Task created in ${todolist.title}.`);
+  command("proofhub.filter", async () => {
+    const options = [
+      { label: t.filter.mine, detail: t.filter.mineDetail, key: "mine" as const },
+      {
+        label: t.filter.hideCompleted,
+        detail: t.filter.hideCompletedDetail,
+        key: "hideCompleted" as const,
+      },
+      { label: t.filter.overdue, detail: t.filter.overdueDetail, key: "overdueOnly" as const },
+    ].map((option) => ({ ...option, picked: Boolean(provider.filter[option.key]) }));
+
+    const picked = await vscode.window.showQuickPick(options, {
+      title: t.filter.title,
+      canPickMany: true,
+      ignoreFocusOut: true,
+    });
+    if (!picked) {
+      return;
+    }
+    const chosen = new Set(picked.map((option) => option.key));
+    provider.setFilter({
+      ...provider.filter,
+      mine: chosen.has("mine"),
+      hideCompleted: chosen.has("hideCompleted"),
+      overdueOnly: chosen.has("overdueOnly"),
+    });
+    showFilter();
+  });
+
+  command("proofhub.sort", async () => {
+    const options: { label: string; detail: string; key: SortKey }[] = [
+      { label: t.filter.sort.list, detail: t.filter.sort.listDetail, key: "list" },
+      { label: t.filter.sort.due, detail: t.filter.sort.dueDetail, key: "due" },
+      { label: t.filter.sort.title, detail: t.filter.sort.titleDetail, key: "title" },
+      { label: t.filter.sort.assigned, detail: t.filter.sort.assignedDetail, key: "assigned" },
+    ];
+    const picked = await vscode.window.showQuickPick(options, {
+      title: t.filter.sortTitle,
+      ignoreFocusOut: true,
+    });
+    if (picked) {
+      provider.setSort(picked.key);
+    }
+  });
+
+  command("proofhub.clearFilter", async () => {
+    provider.setFilter({ ...EMPTY_FILTER });
+    showFilter();
   });
 
   command("proofhub.completeTask", async (node: Node) => {
@@ -237,7 +311,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await active.client.completeTask(node.project.id, node.todolist.id, node.task.id);
     provider.refresh(provider.getParent(node));
     detail.refreshIfShowing(node.task.id);
-    vscode.window.showInformationMessage(`Completed ${node.task.title}.`);
+    vscode.window.showInformationMessage(t.task.completed(node.task.title));
   });
 
   command("proofhub.comment", async (node: Node) => {
@@ -246,17 +320,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     const content = await vscode.window.showInputBox({
-      title: `Comment on ${node.task.title}`,
-      prompt: "Your comment",
+      title: t.task.commentTitle(node.task.title),
+      prompt: t.task.commentPrompt,
       ignoreFocusOut: true,
-      validateInput: (value) => (value.trim() ? undefined : "The comment cannot be empty"),
+      validateInput: (value) => (value.trim() ? undefined : t.task.commentEmpty),
     });
     if (!content) {
       return;
     }
     await active.client.addComment(node.project.id, node.todolist.id, node.task.id, content.trim());
     detail.refreshIfShowing(node.task.id);
-    vscode.window.showInformationMessage("Comment posted.");
+    vscode.window.showInformationMessage(t.task.commentPosted);
   });
 
   command("proofhub.startTimer", async (node: Node) => {
@@ -266,7 +340,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
     const running = timer.running;
     if (running) {
-      vscode.window.showWarningMessage(`A timer is already running on ${running.title}.`);
+      vscode.window.showWarningMessage(t.time.alreadyRunning(running.title));
       return;
     }
     await timer.start({
@@ -286,7 +360,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
     const running = timer.running;
     if (!running) {
-      vscode.window.showInformationMessage("No timer is running.");
+      vscode.window.showInformationMessage(t.time.notRunning);
       return;
     }
     const hours = formatDuration(Date.now() - running.startedAt);
@@ -301,11 +375,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     const hours = await vscode.window.showInputBox({
-      title: `Log time on ${node.task.title}`,
-      prompt: "Hours as H:MM",
+      title: t.time.logTitle(node.task.title),
+      prompt: t.time.hoursPrompt,
       value: "1:00",
       ignoreFocusOut: true,
-      validateInput: (value) => (/^\d{1,3}:[0-5]\d$/.test(value.trim()) ? undefined : "Use H:MM"),
+      validateInput: (value) => (/^\d{1,3}:[0-5]\d$/.test(value.trim()) ? undefined : t.time.hoursInvalid),
     });
     if (!hours) {
       return;
@@ -322,7 +396,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const mine = await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "Collecting your open tasks",
+        title: t.mine.collecting,
         cancellable: true,
       },
       async (progress, token) => {
@@ -335,7 +409,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             break;
           }
           progress.report({
-            message: `${project.title} (${index + 1}/${projects.length})`,
+            message: t.mine.progress(project.title, index + 1, projects.length),
             increment: 100 / Math.max(projects.length, 1),
           });
           for (const todolist of await active.client.todolists(project.id)) {
@@ -358,11 +432,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     );
 
     if (mine.length === 0) {
-      vscode.window.showInformationMessage("No open tasks assigned to you.");
+      vscode.window.showInformationMessage(t.mine.none);
       return;
     }
     const picked = await vscode.window.showQuickPick(mine, {
-      title: `Your open tasks (${mine.length})`,
+      title: t.mine.title(mine.length),
       matchOnDescription: true,
     });
     if (picked) {
@@ -380,7 +454,7 @@ async function moveViewToRight(): Promise<void> {
   ].find((id) => available.has(id));
   if (!move) {
     vscode.window.showInformationMessage(
-      "This VS Code build has no command to move a view. Drag the ProofHub icon to the right sidebar once.",
+      t.layout.cannotMove,
     );
     return;
   }
@@ -401,7 +475,7 @@ async function logTimeFor(
 ): Promise<void> {
   const sheets = await session.client.timesheets(projectId);
   if (sheets.length === 0) {
-    vscode.window.showWarningMessage("This project has no timesheet to log time into.");
+    vscode.window.showWarningMessage(t.time.noTimesheet);
     return;
   }
   const sheet =
@@ -410,7 +484,7 @@ async function logTimeFor(
       : await vscode.window
           .showQuickPick(
             sheets.map((s) => ({ label: s.title, id: s.id })),
-            { title: "Timesheet", ignoreFocusOut: true },
+            { title: t.time.timesheet, ignoreFocusOut: true },
           )
           .then((picked) => (picked ? { id: picked.id, title: picked.label } : undefined));
   if (!sheet) {
@@ -418,8 +492,8 @@ async function logTimeFor(
   }
 
   const description = await vscode.window.showInputBox({
-    title: `Log ${hours} on ${taskTitle}`,
-    prompt: "What did you work on",
+    title: t.time.logTitle(taskTitle),
+    prompt: t.time.whatPrompt,
     ignoreFocusOut: true,
   });
   if (description === undefined) {
@@ -432,7 +506,7 @@ async function logTimeFor(
     logged_date: today(),
     task_id: taskId,
   });
-  vscode.window.showInformationMessage(`Logged ${hours} on ${taskTitle}.`);
+  vscode.window.showInformationMessage(t.time.logged(hours, taskTitle));
 }
 
 export function deactivate(): void {}
