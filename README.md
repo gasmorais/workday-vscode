@@ -1,0 +1,54 @@
+# ProofHub for VS Code
+
+Extensão interna que traz projetos, tarefas, comentários e apontamento de horas do ProofHub para dentro do editor.
+
+## Conexão
+
+O ProofHub **não tem OAuth**. A API v3 aceita apenas uma chave pessoal enviada no cabeçalho `X-API-KEY`, então não existe o fluxo de abrir o navegador e voltar autenticado sozinho. O comando `ProofHub: Connect` faz o mais próximo disso:
+
+1. Pergunta o host da conta, por exemplo `acme.proofhub.com`.
+2. Abre o navegador na conta. A chave fica no ícone de perfil, no canto inferior esquerdo, em **API access**.
+3. Ao voltar para o VS Code, a chave é lida da área de transferência e já vem preenchida no campo. Basta confirmar.
+4. A chave é validada com uma chamada real antes de ser aceita.
+
+A chave é **por desenvolvedor** e fica no SecretStorage do VS Code, nunca em arquivo de configuração nem no repositório. Isso importa porque toda ação registra autoria no ProofHub: com a chave de outra pessoa, as tarefas apareceriam criadas por ela.
+
+O e-mail de contato exigido pelo cabeçalho `User-Agent` é preenchido sozinho a partir da conta conectada.
+
+## O que dá para fazer
+
+| Comando | Ação |
+|---|---|
+| `ProofHub: Connect` / `Disconnect` | conectar e remover a chave desta máquina |
+| `ProofHub: New Task` | criar tarefa numa lista, com responsável e prazo |
+| `ProofHub: Complete Task` | concluir a tarefa selecionada |
+| `ProofHub: Add Comment` | comentar numa tarefa |
+| `ProofHub: Start Timer` | iniciar o cronômetro, que aparece na barra de status |
+| `ProofHub: Stop Timer and Log Time` | parar e lançar as horas no timesheet do projeto |
+| `ProofHub: Log Time` | lançar horas manualmente, no formato `H:MM` |
+| `ProofHub: My Tasks` | listar suas tarefas abertas em todos os projetos |
+| `ProofHub: Open in Browser` | abrir o item no ProofHub |
+
+A barra lateral mostra projetos, listas e tarefas, com prazo e contagem de subtarefas ao lado do título.
+
+## Limite de requisições
+
+A API permite 25 requisições a cada 10 segundos por conta e IP. O cliente aplica esse limite localmente com uma janela deslizante, e quando o servidor responde `429` ele respeita o `Retry-After` antes de repetir, até três vezes. Sem isso, a árvore de um projeto grande estouraria a cota sozinha.
+
+## Desenvolver
+
+```bash
+npm install
+npm run check    # tipos e testes
+```
+
+`F5` abre uma janela do VS Code com a extensão carregada.
+
+Os testes cobrem o cliente HTTP com `fetch` injetado, sem tocar a rede: montagem de URL e cabeçalhos, corpo das mutações, tradução de erro, repetição no `429` e a janela do limitador. `npm test` compila antes de rodar.
+
+## Ainda não implementado
+
+- Discussões e anexos.
+- Editar tarefa depois de criada, além de concluir.
+- Relatórios agregados de tempo. Hoje o apontamento é individual, por tarefa.
+- Atualização automática da árvore. É preciso usar `ProofHub: Refresh` após mudanças feitas fora do editor.
