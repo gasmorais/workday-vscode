@@ -33,7 +33,7 @@
   "config.autoRefreshMinutes": "Atualizar a árvore a cada tantos minutos enquanto a janela estiver em foco. Zero desliga.",
   "command.filterByPerson": "ProofHub: Filtrar por responsável",
   "view.teams": "Teams",
-  "welcome.teams": "Conecte no Teams para ver suas conversas, as reuniões de hoje e o estado da call ao vivo.\n[Conectar no Teams](command:proofhub.teams.connect)\n\nO login usa sua conta Microsoft. O estado da call vem do Teams aberto neste computador e não sai daqui.",
+  "welcome.teams": "Acompanhe suas calls do Teams nesta maquina e transforme em horas lancadas.\n[Acompanhar calls do Teams](command:proofhub.teams.watchCalls)\nChats e reunioes exigem um app registrado no Azure. Veja docs/teams-setup.md.\n[Ligar ao Teams](command:proofhub.teams.connect)",
   "command.teams.connect": "ProofHub: Conectar no Teams",
   "command.teams.disconnect": "ProofHub: Desconectar do Teams",
   "command.teams.refresh": "ProofHub: Atualizar o Teams",
@@ -44,5 +44,7 @@
   "config.teams.clientId": "Identificador do aplicativo no Azure AD usado para entrar no Microsoft Graph. Em branco, usa a conta Microsoft do próprio VS Code.",
   "config.teams.tenantId": "Identificador ou domínio do tenant no Azure AD. Em branco, aceita qualquer conta corporativa ou de estudante.",
   "config.teams.localPort": "Porta do API de aplicativos de terceiros do Teams neste computador.",
-  "config.teams.roundMinutes": "Arredondar o tempo da call para este múltiplo de minutos antes de lançar."
+  "config.teams.roundMinutes": "Arredondar o tempo da call para este múltiplo de minutos antes de lançar.",
+  "command.teams.watchCalls": "Acompanhar calls do Teams",
+  "command.teams.stopCalls": "Parar de acompanhar calls"
 }

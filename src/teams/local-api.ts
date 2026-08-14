@@ -39,9 +39,12 @@ export class TeamsLocalApi {
   private stopped = true;
   private readonly emitter = new vscode.EventEmitter<MeetingState>();
   private readonly failures = new vscode.EventEmitter<string>();
+  private readonly opened = new vscode.EventEmitter<void>();
+  private warned = false;
 
   readonly onMeeting = this.emitter.event;
   readonly onProblem = this.failures.event;
+  readonly onOpen = this.opened.event;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -67,6 +70,7 @@ export class TeamsLocalApi {
   dispose(): void {
     this.stop();
     this.emitter.dispose();
+    this.opened.dispose();
     this.failures.dispose();
   }
 
@@ -118,6 +122,11 @@ export class TeamsLocalApi {
       }
     });
 
+    socket.on("open", () => {
+      this.warned = false;
+      this.opened.fire();
+    });
+
     socket.on("close", () => {
       this.socket = undefined;
       this.retry();
@@ -125,6 +134,10 @@ export class TeamsLocalApi {
 
     socket.on("error", () => {
       this.socket = undefined;
+      if (!this.warned) {
+        this.warned = true;
+        this.failures.fire(t.teams.localUnreachable);
+      }
     });
   }
 

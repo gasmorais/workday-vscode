@@ -214,6 +214,11 @@ export const en: Strings = {
       `Nobody is assigned to ${kind}, so it shows up in no one's queue.`,
   },
   teams: {
+    localUnreachable:
+      "Teams did not answer on the local port. Turn on the third-party app API in Teams settings, under Privacy.",
+    callsWatching: "Connected to Teams on this machine. Calls will become hours.",
+    callsPairing: "Approve the request that shows up in Teams to allow access.",
+    callsStopped: "Call tracking is off.",
     connectFailed: (reason: string) => `Could not connect to Teams: ${reason}`,
     localMissing: "Install the extension dependencies to connect to the local Teams client.",
     title: "Teams",

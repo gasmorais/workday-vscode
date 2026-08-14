@@ -213,6 +213,11 @@ export const ptBR = {
       `Ninguém está atribuído a ${kind}, então ela não aparece na fila de nenhuma pessoa.`,
   },
   teams: {
+    localUnreachable:
+      "O Teams nao respondeu na porta local. Ligue o API de aplicativos de terceiros nas configuracoes do Teams, em Privacidade.",
+    callsWatching: "Ligado ao Teams desta maquina. As calls viram horas.",
+    callsPairing: "Aprove o pedido que vai aparecer no Teams para liberar o acesso.",
+    callsStopped: "O acompanhamento de calls foi desligado.",
     connectFailed: (reason: string) => `Nao foi possivel ligar ao Teams: ${reason}`,
     localMissing: "Instale as dependencias da extensao para ligar ao Teams local.",
     title: "Teams",

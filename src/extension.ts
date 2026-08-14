@@ -23,7 +23,12 @@ import {
   type CallSession,
   type MeetingState,
 } from "./teams/call-tracker.js";
-import { CONFIG_SECTION, FOCUS_SYNC_DEBOUNCE_MS, HOURS_PATTERN } from "./constants.js";
+import {
+  CONFIG_SECTION,
+  FOCUS_SYNC_DEBOUNCE_MS,
+  HOURS_PATTERN,
+  STATE_TEAMS_WATCH,
+} from "./constants.js";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   useLocale(vscode.env.language);
@@ -765,13 +770,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     detail.refreshIfShowing(node.task.id);
   });
 
-  void useTeams(false)
-    .then(async (name) => {
-      if (name !== undefined) {
-        await callWatch.start();
-      }
-    })
-    .catch(() => undefined);
+  context.subscriptions.push(
+    callWatch.onOpen(async () => {
+      await vscode.commands.executeCommand("setContext", "proofhub.callsWatched", true);
+      vscode.window.showInformationMessage(t.teams.callsWatching);
+    }),
+    callWatch.onProblem((reason) => vscode.window.showWarningMessage(reason)),
+  );
+
+  command("proofhub.teams.watchCalls", async () => {
+    await context.globalState.update(STATE_TEAMS_WATCH, true);
+    vscode.window.showInformationMessage(t.teams.callsPairing);
+    await callWatch.start();
+  });
+
+  command("proofhub.teams.stopCalls", async () => {
+    await context.globalState.update(STATE_TEAMS_WATCH, false);
+    callWatch.stop();
+    callBar.hide();
+    await vscode.commands.executeCommand("setContext", "proofhub.callsWatched", false);
+    vscode.window.showInformationMessage(t.teams.callsStopped);
+  });
+
+  if (context.globalState.get<boolean>(STATE_TEAMS_WATCH)) {
+    void callWatch.start();
+  }
+
+  void useTeams(false).catch(() => undefined);
 }
 
 async function moveViewToRight(): Promise<void> {

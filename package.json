@@ -198,6 +198,17 @@
         "command": "proofhub.teams.logCall",
         "title": "%command.teams.logCall%",
         "icon": "$(watch)"
+      },
+      {
+        "command": "proofhub.teams.watchCalls",
+        "title": "%command.teams.watchCalls%",
+        "category": "Workday",
+        "icon": "$(device-camera-video)"
+      },
+      {
+        "command": "proofhub.teams.stopCalls",
+        "title": "%command.teams.stopCalls%",
+        "category": "Workday"
       }
     ],
     "menus": {
@@ -261,6 +272,11 @@
           "command": "proofhub.teams.disconnect",
           "when": "view == proofhub.teams && proofhub.teamsConnected",
           "group": "9_layout"
+        },
+        {
+          "command": "proofhub.teams.watchCalls",
+          "when": "view == proofhub.teams && !proofhub.callsWatched",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [

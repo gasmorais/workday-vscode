@@ -9,13 +9,23 @@ The Teams side of the extension has two independent halves. Each one works witho
 
 ## Microsoft Graph
 
-### The easy path
+### The built-in account does not work for chat
 
-Leave `proofhub.teams.clientId` empty and run `ProofHub: Connect to Teams`. The extension asks VS Code for a Microsoft session and reuses the account you already signed in with. If your tenant allows the VS Code application to request the scopes below, this is all you need.
+Leave `proofhub.teams.clientId` empty and the extension asks VS Code for a Microsoft session. Sign-in succeeds, then the token request fails with `AADSTS65002`:
+
+```
+Consent between first party application 'aebc6443-996d-45c2-90f0-388ff96faa56'
+and first party resource '00000003-0000-0000-c000-000000000000' must be
+configured via preauthorization
+```
+
+That client id is the VS Code application itself. Microsoft preauthorizes a fixed list of Graph scopes for it, and `Chat.Read` and `ChatMessage.Send` are not on that list. No tenant setting and no administrator can change this, because the approval belongs to the API owner, not to your directory. Registering your own application is the only way to read chats.
+
+Call tracking does not go through Graph at all, so it works without any of this. See the Teams local API section.
 
 ### The explicit path
 
-If your tenant blocks the built-in application, register your own.
+Register your own application. This is required for chats, meetings and presence.
 
 1. Open the Azure portal, go to Microsoft Entra ID, App registrations, New registration.
 2. Name it anything. Under supported account types, pick accounts in this organizational directory only.
@@ -40,6 +50,10 @@ The refresh token is stored in the VS Code secret vault on this machine. `ProofH
 
 ## Teams local API
 
+This half needs no Azure application, no scopes and no administrator. It is the recommended path when Graph is out of reach.
+
+Run `Workday: Track Teams Calls`. The setting survives restarts, so it is asked once.
+
 The new Teams desktop client exposes a WebSocket on `127.0.0.1:8124` for third-party applications, the same one Stream Deck plugins use. The classic client does not.
 
 1. In Teams, open Settings, Privacy, and turn on Third-party app API.
@@ -63,3 +77,5 @@ Joining or running a call inside VS Code. There is no audio or video stack in a 
 Embedding the Teams web app in a panel. `teams.microsoft.com` refuses to be framed and the webview content policy blocks it from the other side.
 
 Setting your Teams status message. It requires the `Presence.ReadWrite` scope on a beta Graph endpoint that is not available to delegated third-party applications today.
+
+Reading chats without an Azure application. The local API reports meeting state only, never messages, and it offers no way to send one. The Teams client keeps its message cache in an undocumented store inside a sandboxed container that changes shape between releases, so reading it directly is not something this extension does.
