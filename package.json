@@ -158,6 +158,11 @@
           "type": "boolean",
           "default": false,
           "description": "Include archived projects in the tree."
+        },
+        "proofhub.apiPagePath": {
+          "type": "string",
+          "default": "bapplite/#app/me/api",
+          "description": "Path of the API access page, opened by Connect. Adjust if ProofHub moves it."
         }
       }
     }

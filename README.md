@@ -7,11 +7,13 @@ Extensão interna que traz projetos, tarefas, comentários e apontamento de hora
 O ProofHub **não tem OAuth**. A API v3 aceita apenas uma chave pessoal enviada no cabeçalho `X-API-KEY`, então não existe o fluxo de abrir o navegador e voltar autenticado sozinho. O comando `ProofHub: Connect` faz o mais próximo disso:
 
 1. Já vem apontada para `acme.proofhub.com`, então não pergunta nada de conta. Para outra conta, use `ProofHub: Change Account`.
-2. Abre o navegador na conta. A chave fica no ícone de perfil, no canto inferior esquerdo, em **API access**.
-3. Ao voltar para o VS Code, a chave é lida da área de transferência e já vem preenchida no campo. Basta confirmar.
-4. A chave é validada com uma chamada real antes de ser aceita. Se falhar, o erro aparece com a opção de tentar de novo, sem recomeçar o fluxo.
+2. Abre o navegador direto na página de API access.
+3. Você copia a chave lá. **Não precisa colar nada no VS Code**: a extensão observa a área de transferência, reconhece a chave, valida contra a API e conecta sozinha.
+4. O que já estava copiado antes é ignorado, e texto que não tem cara de chave nunca vira requisição.
 
-Quem já tem a chave em mãos pode pular o navegador pelo botão **I already have the key**.
+A espera dura três minutos, mostra progresso e pode ser cancelada. Quem preferir o caminho manual usa o botão **Paste the key myself**.
+
+Se o ProofHub mudar o endereço dessa página, ajuste `proofhub.apiPagePath` nas configurações em vez de mexer no código.
 
 A chave é **por desenvolvedor** e fica no SecretStorage do VS Code, nunca em arquivo de configuração nem no repositório. Isso importa porque toda ação registra autoria no ProofHub: com a chave de outra pessoa, as tarefas apareceriam criadas por ela.
 
@@ -58,7 +60,7 @@ npm run check    # tipos e testes
 
 `F5` abre uma janela do VS Code com a extensão carregada.
 
-Os testes cobrem o cliente HTTP com `fetch` injetado, sem tocar a rede: montagem de URL e cabeçalhos, corpo das mutações, tradução de erro, repetição no `429` e a janela do limitador. `npm test` compila antes de rodar.
+Os testes cobrem o cliente HTTP com `fetch` injetado, sem tocar a rede: montagem de URL e cabeçalhos, corpo das mutações, tradução de erro, repetição no `429` e a janela do limitador. A captura da chave e a montagem das URLs do app também são testadas, com relógio e área de transferência falsos. `npm test` compila antes de rodar.
 
 ## Ainda não implementado
 
