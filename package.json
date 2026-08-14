@@ -209,6 +209,11 @@
         "command": "proofhub.teams.stopCalls",
         "title": "%command.teams.stopCalls%",
         "category": "Workday"
+      },
+      {
+        "command": "proofhub.teams.diagnoseCalls",
+        "title": "%command.teams.diagnoseCalls%",
+        "category": "Workday"
       }
     ],
     "menus": {

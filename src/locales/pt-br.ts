@@ -213,8 +213,13 @@ export const ptBR = {
       `Ninguém está atribuído a ${kind}, então ela não aparece na fila de nenhuma pessoa.`,
   },
   teams: {
+    openPrivacy: "Abrir Ajustes do Sistema",
+    callsSeeing: (title: string) =>
+      `Voce esta em call${title ? ` (${title})` : ""}. O tempo ja esta correndo.`,
+    callsWatchingMac: (count: number) =>
+      `Acompanhando o Teams desta maquina. ${count} janelas lidas, nenhuma call em curso.`,
     macDenied: (reason: string) =>
-      `Nao consegui ler as janelas do Teams. Libere o VS Code em Ajustes do Sistema, Privacidade e Seguranca, Acessibilidade. ${reason}`,
+      `Nao consegui ler as janelas do Teams. Libere o VS Code em Ajustes do Sistema, Privacidade e Seguranca, Automacao, marcando System Events. ${reason}`,
     callWith: (title: string) => `Call: ${title}`,
     localUnreachable:
       "O Teams nao respondeu na porta local. Ligue o API de aplicativos de terceiros nas configuracoes do Teams, em Privacidade.",

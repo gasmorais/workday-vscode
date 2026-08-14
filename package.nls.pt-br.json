@@ -48,5 +48,6 @@
   "command.teams.watchCalls": "Acompanhar calls do Teams",
   "command.teams.stopCalls": "Parar de acompanhar calls",
   "config.teams.macPollSeconds": "De quantos em quantos segundos olhar as janelas do Teams. Apenas no macOS.",
-  "config.teams.callWindowPattern": "Expressao regular que identifica uma janela de call do Teams. Deixe vazio para usar o padrao."
+  "config.teams.callWindowPattern": "Expressao regular que identifica uma janela de call do Teams. Deixe vazio para usar o padrao.",
+  "command.teams.diagnoseCalls": "Diagnosticar acompanhamento de calls"
 }

@@ -214,8 +214,13 @@ export const en: Strings = {
       `Nobody is assigned to ${kind}, so it shows up in no one's queue.`,
   },
   teams: {
+    openPrivacy: "Open System Settings",
+    callsSeeing: (title: string) =>
+      `You are in a call${title ? ` (${title})` : ""}. The clock is running.`,
+    callsWatchingMac: (count: number) =>
+      `Watching Teams on this machine. ${count} windows read, no call running.`,
     macDenied: (reason: string) =>
-      `Could not read the Teams windows. Allow VS Code under System Settings, Privacy and Security, Accessibility. ${reason}`,
+      `Could not read the Teams windows. Allow VS Code under System Settings, Privacy and Security, Automation, ticking System Events. ${reason}`,
     callWith: (title: string) => `Call: ${title}`,
     localUnreachable:
       "Teams did not answer on the local port. Turn on the third-party app API in Teams settings, under Privacy.",

@@ -802,6 +802,41 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await context.globalState.update(STATE_TEAMS_WATCH, true);
     macWatch.start();
     await callWatch.start();
+    const probe = await macWatch.probe();
+    await vscode.commands.executeCommand("setContext", "proofhub.callsWatched", true);
+    if (probe.error) {
+      const open = await vscode.window.showWarningMessage(
+        t.teams.macDenied(probe.error),
+        t.teams.openPrivacy,
+      );
+      if (open) {
+        await vscode.env.openExternal(
+          vscode.Uri.parse(
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation",
+          ),
+        );
+      }
+      return;
+    }
+    vscode.window.showInformationMessage(
+      probe.call.inCall
+        ? t.teams.callsSeeing(probe.call.title ?? "")
+        : t.teams.callsWatchingMac(probe.names.length),
+    );
+  });
+
+  command("proofhub.teams.diagnoseCalls", async () => {
+    const probe = await macWatch.probe();
+    const lines = [
+      `local api: ${callWatch.connected ? "connected" : "not connected"}`,
+      `macos watch: ${macWatch.running ? "running" : "stopped"}`,
+      probe.error ? `error: ${probe.error}` : `windows: ${probe.names.length}`,
+      ...probe.names.map((name) => `  ${name}`),
+      `in call: ${probe.call.inCall}${probe.call.title ? ` (${probe.call.title})` : ""}`,
+    ];
+    const channel = vscode.window.createOutputChannel("Workday");
+    channel.appendLine(lines.join("\n"));
+    channel.show(true);
   });
 
   command("proofhub.teams.stopCalls", async () => {

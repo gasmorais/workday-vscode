@@ -2,7 +2,12 @@ import { execFile } from "node:child_process";
 import * as vscode from "vscode";
 import { CONFIG_SECTION, MAC_POLL_SECONDS } from "../constants.js";
 import { t } from "../locales/index.js";
-import { CALL_WINDOW_PATTERN, parseWindowList, readWindows } from "./mac-windows.js";
+import {
+  CALL_WINDOW_PATTERN,
+  parseWindowList,
+  readWindows,
+  type CallWindow,
+} from "./mac-windows.js";
 
 const SCRIPT = `tell application "System Events"
   if not (exists process "Microsoft Teams") then return ""
@@ -61,6 +66,28 @@ export class MacCallWatcher {
     this.failures.dispose();
   }
 
+  async probe(): Promise<{ names: string[]; call: CallWindow; error?: string }> {
+    try {
+      const names = parseWindowList((await run()).trim());
+      return { names, call: readWindows(names, this.pattern()) };
+    } catch (error) {
+      return {
+        names: [],
+        call: { inCall: false },
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  private pattern(): string {
+    return (
+      vscode.workspace
+        .getConfiguration(CONFIG_SECTION)
+        .get<string>("teams.callWindowPattern")
+        ?.trim() || CALL_WINDOW_PATTERN
+    );
+  }
+
   private async tick(): Promise<void> {
     let output: string;
     try {
@@ -73,12 +100,7 @@ export class MacCallWatcher {
       return;
     }
     this.warned = false;
-    const pattern =
-      vscode.workspace
-        .getConfiguration(CONFIG_SECTION)
-        .get<string>("teams.callWindowPattern")
-        ?.trim() || CALL_WINDOW_PATTERN;
     const names = parseWindowList(output.trim());
-    this.emitter.fire(readWindows(names, pattern));
+    this.emitter.fire(readWindows(names, this.pattern()));
   }
 }
