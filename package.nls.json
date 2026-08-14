@@ -1,5 +1,5 @@
 {
-  "extension.description": "Browse and update ProofHub projects, tasks, comments and time without leaving the editor.",
+  "extension.description": "Track ProofHub work and Teams conversations without leaving the editor.",
   "view.projects": "Projects",
   "welcome.contents": "Connect to ProofHub to see your projects and tasks here.\n[Connect to ProofHub](command:proofhub.connect)\n\nThe key is personal, validated on connection and stored in the VS Code secret vault, on this machine only.",
   "command.connect": "ProofHub: Connect",
@@ -31,5 +31,18 @@
   "config.dailyGoal": "Daily hours goal, in the H:MM format. It becomes the reference line of the days chart.",
   "config.cacheSeconds": "How long the tree keeps projects, lists and tasks before asking ProofHub again. Zero always asks.",
   "config.autoRefreshMinutes": "Refresh the tree every so many minutes while the window has focus. Zero turns it off.",
-  "command.filterByPerson": "ProofHub: Filter by assignee"
+  "command.filterByPerson": "ProofHub: Filter by assignee",
+  "view.teams": "Teams",
+  "welcome.teams": "Connect to Teams to see your chats, today's meetings and live call state.\n[Connect to Teams](command:proofhub.teams.connect)\n\nSign-in uses your Microsoft account. Call state comes from Teams running on this computer and never leaves it.",
+  "command.teams.connect": "ProofHub: Connect to Teams",
+  "command.teams.disconnect": "ProofHub: Disconnect from Teams",
+  "command.teams.refresh": "ProofHub: Refresh Teams",
+  "command.teams.openChat": "ProofHub: Open Teams chat",
+  "command.teams.toggleFavorite": "ProofHub: Pin or unpin chat",
+  "command.teams.joinMeeting": "ProofHub: Join meeting",
+  "command.teams.logCall": "ProofHub: Log the last call as hours",
+  "config.teams.clientId": "Azure AD application id used to sign in to Microsoft Graph. Left blank, the built-in VS Code Microsoft account is used instead.",
+  "config.teams.tenantId": "Azure AD tenant id or domain. Left blank, any work or school account is accepted.",
+  "config.teams.localPort": "Port of the Teams third-party app API on this computer.",
+  "config.teams.roundMinutes": "Round call time up to this many minutes before logging it."
 }

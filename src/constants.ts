@@ -8,6 +8,25 @@ export const STATE_MY_PERSON = "proofhub.myPersonId";
 export const STATE_RUNNING_TIMERS = "proofhub.runningTimers";
 
 export const API_PATH = "api/v3";
+export const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
+export const GRAPH_SCOPES = [
+  "offline_access",
+  "User.Read",
+  "Chat.Read",
+  "ChatMessage.Send",
+  "Presence.Read",
+  "Calendars.Read",
+] as const;
+
+export const SECRET_TEAMS_REFRESH = "proofhub.teams.refreshToken";
+export const SECRET_TEAMS_LOCAL = "proofhub.teams.localToken";
+export const STATE_TEAMS_FAVORITES = "proofhub.teams.favorites";
+
+export const TEAMS_LOCAL_PORT = 8124;
+export const TEAMS_LOCAL_PROTOCOL = "2.0.0";
+export const TEAMS_RECONNECT_MS = 15_000;
+export const MIN_CALL_MINUTES = 2;
+export const CHAT_PAGE_SIZE = 30;
 export const APP_PREFIX = "bapplite/#app";
 
 export const RATE_LIMIT = 25;

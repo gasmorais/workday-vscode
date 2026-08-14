@@ -1,5 +1,5 @@
 {
-  "extension.description": "Veja e atualize projetos, tarefas, comentários e horas do ProofHub sem sair do editor.",
+  "extension.description": "Acompanhe o trabalho no ProofHub e as conversas do Teams sem sair do editor.",
   "view.projects": "Projetos",
   "welcome.contents": "Conecte no ProofHub para ver seus projetos e tarefas aqui.\n[Conectar no ProofHub](command:proofhub.connect)\n\nA chave é pessoal, validada na conexão e guardada no cofre de segredos do VS Code, só nesta máquina.",
   "command.connect": "ProofHub: Conectar",
@@ -31,5 +31,18 @@
   "config.dailyGoal": "Meta diária de horas, no formato H:MM. Vira a linha de referência do gráfico de dias.",
   "config.cacheSeconds": "Por quanto tempo a árvore guarda projetos, listas e tarefas antes de perguntar de novo ao ProofHub. Zero sempre pergunta.",
   "config.autoRefreshMinutes": "Atualizar a árvore a cada tantos minutos enquanto a janela estiver em foco. Zero desliga.",
-  "command.filterByPerson": "ProofHub: Filtrar por responsável"
+  "command.filterByPerson": "ProofHub: Filtrar por responsável",
+  "view.teams": "Teams",
+  "welcome.teams": "Conecte no Teams para ver suas conversas, as reuniões de hoje e o estado da call ao vivo.\n[Conectar no Teams](command:proofhub.teams.connect)\n\nO login usa sua conta Microsoft. O estado da call vem do Teams aberto neste computador e não sai daqui.",
+  "command.teams.connect": "ProofHub: Conectar no Teams",
+  "command.teams.disconnect": "ProofHub: Desconectar do Teams",
+  "command.teams.refresh": "ProofHub: Atualizar o Teams",
+  "command.teams.openChat": "ProofHub: Abrir conversa do Teams",
+  "command.teams.toggleFavorite": "ProofHub: Fixar ou desafixar conversa",
+  "command.teams.joinMeeting": "ProofHub: Entrar na reunião",
+  "command.teams.logCall": "ProofHub: Lançar a última call como horas",
+  "config.teams.clientId": "Identificador do aplicativo no Azure AD usado para entrar no Microsoft Graph. Em branco, usa a conta Microsoft do próprio VS Code.",
+  "config.teams.tenantId": "Identificador ou domínio do tenant no Azure AD. Em branco, aceita qualquer conta corporativa ou de estudante.",
+  "config.teams.localPort": "Porta do API de aplicativos de terceiros do Teams neste computador.",
+  "config.teams.roundMinutes": "Arredondar o tempo da call para este múltiplo de minutos antes de lançar."
 }

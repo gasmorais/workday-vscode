@@ -12,6 +12,17 @@ import { TaskDetail, type TimerTarget } from "./detail.js";
 import { ReportPanel } from "./report-panel.js";
 import { createTask as runCreateTask } from "./flows/create-task.js";
 import { EMPTY_FILTER, isActive, type SortKey } from "./filter.js";
+import { TeamsAuth } from "./teams/auth.js";
+import { GraphClient } from "./teams/graph.js";
+import { TeamsProvider, type TeamsNode } from "./teams/tree.js";
+import { ChatPanel } from "./teams/chat-panel.js";
+import { TeamsLocalApi } from "./teams/local-api.js";
+import {
+  CallTracker,
+  roundedHours,
+  type CallSession,
+  type MeetingState,
+} from "./teams/call-tracker.js";
 import { CONFIG_SECTION, FOCUS_SYNC_DEBOUNCE_MS, HOURS_PATTERN } from "./constants.js";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -544,12 +555,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     detail.refreshIfShowing(node.task.id);
   });
 
-  command("proofhub.myTasks", async () => {
-    const active = await requireSession();
-    if (!active) {
-      return;
-    }
-    const mine = await vscode.window.withProgress(
+  const collectMyTasks = async (active: Session) =>
+    vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
         title: t.mine.collecting,
@@ -590,18 +597,169 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       },
     );
 
+  const pickMyTask = async (active: Session, title?: string) => {
+    const mine = await collectMyTasks(active);
     if (mine.length === 0) {
       vscode.window.showInformationMessage(t.mine.none);
-      return;
+      return undefined;
     }
     const picked = await vscode.window.showQuickPick(mine, {
-      title: t.mine.title(mine.length),
+      title: title ?? t.mine.title(mine.length),
       matchOnDescription: true,
+      ignoreFocusOut: true,
     });
-    if (picked) {
-      await detail.show(picked.node);
+    return picked?.node;
+  };
+
+  command("proofhub.myTasks", async () => {
+    const active = await requireSession();
+    if (!active) {
+      return;
+    }
+    const node = await pickMyTask(active);
+    if (node) {
+      await detail.show(node);
     }
   });
+
+  const teamsAuth = new TeamsAuth(context);
+  const teamsProvider = new TeamsProvider(context);
+  let graph: GraphClient | undefined;
+  const chatPanel = new ChatPanel(
+    () => graph,
+    () => teamsMe,
+  );
+  let teamsMe: string | undefined;
+
+  const teamsView = vscode.window.createTreeView("proofhub.teams", {
+    treeDataProvider: teamsProvider,
+  });
+  context.subscriptions.push(teamsView);
+
+  const useTeams = async (interactive: boolean): Promise<boolean> => {
+    const token = await teamsAuth.token({ interactive });
+    if (!token) {
+      return false;
+    }
+    graph = new GraphClient({ token: () => teamsAuth.token() });
+    const me = await graph.me().catch(() => undefined);
+    teamsMe = me?.id;
+    teamsProvider.setClient(graph, teamsMe);
+    await vscode.commands.executeCommand("setContext", "proofhub.teamsConnected", true);
+    return Boolean(me);
+  };
+
+  command("proofhub.teams.connect", async () => {
+    if (await useTeams(true)) {
+      const me = await graph?.me().catch(() => undefined);
+      vscode.window.showInformationMessage(t.teams.connected(me?.displayName ?? ""));
+      await callWatch.start();
+    }
+  });
+
+  command("proofhub.teams.disconnect", async () => {
+    await teamsAuth.signOut();
+    graph = undefined;
+    teamsMe = undefined;
+    teamsProvider.setClient(undefined);
+    callWatch.stop();
+    await vscode.commands.executeCommand("setContext", "proofhub.teamsConnected", false);
+    vscode.window.showInformationMessage(t.teams.disconnected);
+  });
+
+  command("proofhub.teams.refresh", async () => {
+    teamsProvider.refresh();
+  });
+
+  command("proofhub.teams.openChat", async (node: TeamsNode) => {
+    if (node?.kind === "chat") {
+      await chatPanel.open(node.row.id);
+    }
+  });
+
+  command("proofhub.teams.toggleFavorite", async (node: TeamsNode) => {
+    if (node?.kind === "chat") {
+      await teamsProvider.toggleFavorite(node.row.id);
+    }
+  });
+
+  command("proofhub.teams.joinMeeting", async (node: TeamsNode) => {
+    if (node?.kind !== "meeting") {
+      return;
+    }
+    const url = node.event.onlineMeeting?.joinUrl ?? node.event.webLink;
+    if (url) {
+      await vscode.env.openExternal(vscode.Uri.parse(url));
+    }
+  });
+
+  const callBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
+  callBar.command = "proofhub.teams.logCall";
+  context.subscriptions.push(callBar);
+
+  const tracker = new CallTracker();
+  const callWatch = new TeamsLocalApi(context);
+  context.subscriptions.push(callWatch);
+  let lastCall: CallSession | undefined;
+
+  const paintCall = (state: MeetingState | undefined) => {
+    if (!tracker.running || !state) {
+      callBar.hide();
+      return;
+    }
+    const elapsed = formatDuration(Date.now() - (tracker.since ?? Date.now()));
+    const marks = [state.isMuted ? t.teams.muted : "", state.isSharing ? t.teams.sharing : ""]
+      .filter(Boolean)
+      .join(", ");
+    callBar.text = `$(device-camera-video) ${elapsed}${marks ? ` (${marks})` : ""}`;
+    callBar.tooltip = t.teams.callFor(elapsed);
+    callBar.show();
+  };
+
+  context.subscriptions.push(
+    callWatch.onMeeting(async (state) => {
+      const finished = tracker.update(state, Date.now());
+      paintCall(state);
+      if (!finished) {
+        return;
+      }
+      lastCall = finished;
+      callBar.hide();
+      const elapsed = formatDuration(finished.endedAt - finished.startedAt);
+      const answer = await vscode.window.showInformationMessage(
+        t.teams.callEnded(elapsed),
+        t.teams.callLog,
+        t.teams.callSkip,
+      );
+      if (answer === t.teams.callLog) {
+        await vscode.commands.executeCommand("proofhub.teams.logCall");
+      }
+    }),
+  );
+
+  command("proofhub.teams.logCall", async () => {
+    const active = await requireSession();
+    const call = lastCall;
+    if (!active || !call) {
+      return;
+    }
+    const node = await pickMyTask(active, t.teams.callTask);
+    if (!node || node.kind !== "task") {
+      return;
+    }
+    await logTimeFor(
+      active,
+      { projectId: node.project.id, todolistId: node.todolist.id, taskId: node.task.id },
+      node.task.title,
+      roundedHours(call.minutes),
+    );
+    lastCall = undefined;
+    detail.refreshIfShowing(node.task.id);
+  });
+
+  if (await useTeams(false)) {
+    await callWatch.start();
+  }
 }
 
 async function moveViewToRight(): Promise<void> {

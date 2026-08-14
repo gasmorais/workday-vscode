@@ -1,6 +1,6 @@
 {
   "name": "proofhub",
-  "displayName": "ProofHub",
+  "displayName": "Workday",
   "description": "%extension.description%",
   "version": "0.1.0",
   "publisher": "proofhub-vscode",
@@ -8,21 +8,22 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gasmorais/proofhub-vscode.git"
+    "url": "https://github.com/gasmorais/workday-vscode.git"
   },
   "bugs": {
-    "url": "https://github.com/gasmorais/proofhub-vscode/issues"
+    "url": "https://github.com/gasmorais/workday-vscode/issues"
   },
-  "homepage": "https://github.com/gasmorais/proofhub-vscode#readme",
+  "homepage": "https://github.com/gasmorais/workday-vscode#readme",
   "keywords": [
     "proofhub",
+    "microsoft-teams",
     "project-management",
     "tasks",
     "time-tracking",
     "timesheet",
     "timer",
-    "productivity",
-    "sidebar"
+    "chat",
+    "productivity"
   ],
   "engines": {
     "vscode": "^1.90.0"
@@ -47,6 +48,10 @@
         {
           "id": "proofhub.projects",
           "name": "%view.projects%"
+        },
+        {
+          "id": "proofhub.teams",
+          "name": "%view.teams%"
         }
       ]
     },
@@ -54,6 +59,10 @@
       {
         "view": "proofhub.projects",
         "contents": "%welcome.contents%"
+      },
+      {
+        "view": "proofhub.teams",
+        "contents": "%welcome.teams%"
       }
     ],
     "commands": [
@@ -155,6 +164,40 @@
         "command": "proofhub.filterByPerson",
         "title": "%command.filterByPerson%",
         "icon": "$(organization)"
+      },
+      {
+        "command": "proofhub.teams.connect",
+        "title": "%command.teams.connect%",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "proofhub.teams.disconnect",
+        "title": "%command.teams.disconnect%"
+      },
+      {
+        "command": "proofhub.teams.refresh",
+        "title": "%command.teams.refresh%",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "proofhub.teams.openChat",
+        "title": "%command.teams.openChat%",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "proofhub.teams.toggleFavorite",
+        "title": "%command.teams.toggleFavorite%",
+        "icon": "$(star)"
+      },
+      {
+        "command": "proofhub.teams.joinMeeting",
+        "title": "%command.teams.joinMeeting%",
+        "icon": "$(device-camera-video)"
+      },
+      {
+        "command": "proofhub.teams.logCall",
+        "title": "%command.teams.logCall%",
+        "icon": "$(watch)"
       }
     ],
     "menus": {
@@ -208,6 +251,16 @@
           "command": "proofhub.filterByPerson",
           "when": "view == proofhub.projects",
           "group": "1_view"
+        },
+        {
+          "command": "proofhub.teams.refresh",
+          "when": "view == proofhub.teams",
+          "group": "navigation@1"
+        },
+        {
+          "command": "proofhub.teams.disconnect",
+          "when": "view == proofhub.teams && proofhub.teamsConnected",
+          "group": "9_layout"
         }
       ],
       "view/item/context": [
@@ -240,6 +293,16 @@
           "command": "proofhub.openInBrowser",
           "when": "view == proofhub.projects",
           "group": "2_open"
+        },
+        {
+          "command": "proofhub.teams.toggleFavorite",
+          "when": "view == proofhub.teams && viewItem =~ /^teamsChat/",
+          "group": "inline@1"
+        },
+        {
+          "command": "proofhub.teams.joinMeeting",
+          "when": "view == proofhub.teams && viewItem == teamsMeetingJoin",
+          "group": "inline@1"
         }
       ]
     },
@@ -292,6 +355,26 @@
           "default": 0,
           "minimum": 0,
           "description": "%config.autoRefreshMinutes%"
+        },
+        "proofhub.teams.clientId": {
+          "type": "string",
+          "default": "",
+          "description": "%config.teams.clientId%"
+        },
+        "proofhub.teams.tenantId": {
+          "type": "string",
+          "default": "",
+          "description": "%config.teams.tenantId%"
+        },
+        "proofhub.teams.localPort": {
+          "type": "number",
+          "default": 8124,
+          "description": "%config.teams.localPort%"
+        },
+        "proofhub.teams.roundMinutes": {
+          "type": "number",
+          "default": 5,
+          "description": "%config.teams.roundMinutes%"
         }
       }
     }
@@ -306,6 +389,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.90.0",
+    "@types/ws": "^8.18.1",
     "@vscode/vsce": "^3.9.2",
     "prettier": "^3.9.6",
     "typescript": "^5.6.0"
@@ -316,5 +400,8 @@
       "description": "The extension only talks to the ProofHub API and never runs workspace code."
     },
     "virtualWorkspaces": true
+  },
+  "dependencies": {
+    "ws": "^8.21.3"
   }
 }
