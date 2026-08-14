@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
 import type { Session } from "../auth.js";
 import { parseHours } from "../format.js";
-import { t } from "../strings.js";
+import { t } from "../locales/index.js";
 import { personName, type Project, type Task, type Todolist } from "../types.js";
+import { DATE_PATTERN, HOURS_PATTERN } from "../constants.js";
 
 export interface CreateTarget {
   project: Project;
@@ -86,7 +87,7 @@ export async function askDueDate(current?: string): Promise<string | undefined> 
     value: current ?? "",
     ignoreFocusOut: true,
     validateInput: (value) =>
-      !value.trim() || /^\d{4}-\d{2}-\d{2}$/.test(value.trim()) ? undefined : t.task.dueInvalid,
+      !value.trim() || DATE_PATTERN.test(value.trim()) ? undefined : t.task.dueInvalid,
   });
   return answer?.trim();
 }
@@ -98,7 +99,7 @@ export async function askEstimate(current?: string): Promise<string | undefined>
     value: current ?? "",
     ignoreFocusOut: true,
     validateInput: (value) =>
-      !value.trim() || /^\d{1,3}:[0-5]\d$/.test(value.trim()) ? undefined : t.time.hoursInvalid,
+      !value.trim() || HOURS_PATTERN.test(value.trim()) ? undefined : t.time.hoursInvalid,
   });
   return answer?.trim();
 }

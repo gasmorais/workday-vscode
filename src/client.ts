@@ -1,3 +1,4 @@
+import { API_PATH } from "./constants.js";
 import { RateLimiter } from "./rate-limit.js";
 import { appPath, type Location } from "./urls.js";
 import type {
@@ -39,7 +40,10 @@ export interface ClientOptions {
 }
 
 export function normalizeAccount(input: string): string {
-  const trimmed = input.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const trimmed = input
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "");
   if (!trimmed) {
     throw new Error("account is required");
   }
@@ -73,7 +77,7 @@ export class ProofHubClient {
   }
 
   get baseUrl(): string {
-    return `https://${this.host}/api/v3`;
+    return `https://${this.host}/${API_PATH}`;
   }
 
   webUrl(path: string): string {
@@ -155,12 +159,7 @@ export class ProofHubClient {
     return this.request<Task>("POST", `projects/${projectId}/todolists/${todolistId}/tasks`, task);
   }
 
-  updateTask(
-    projectId: Id,
-    todolistId: Id,
-    taskId: Id,
-    changes: Partial<Task>,
-  ): Promise<Task> {
+  updateTask(projectId: Id, todolistId: Id, taskId: Id, changes: Partial<Task>): Promise<Task> {
     return this.request<Task>(
       "PUT",
       `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}`,

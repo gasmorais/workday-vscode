@@ -15,9 +15,7 @@ export interface WatchOptions {
 }
 
 export type WatchResult =
-  | { status: "found"; key: string }
-  | { status: "timeout" }
-  | { status: "cancelled" };
+  { status: "found"; key: string } | { status: "timeout" } | { status: "cancelled" };
 
 export async function watchClipboardForKey(
   deps: WatchDeps,

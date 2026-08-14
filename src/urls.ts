@@ -1,6 +1,7 @@
 import type { Id } from "./types.js";
+import { APP_PREFIX } from "./constants.js";
 
-export const APP_PREFIX = "bapplite/#app";
+export { APP_PREFIX };
 
 export function bareId(id: Id, prefix: string): string {
   const value = String(id).trim();
@@ -25,9 +26,10 @@ export function appPath(location: Location): string {
 }
 
 export function parseAppUrl(url: string): (Location & { host: string }) | undefined {
-  const match = /^https?:\/\/([^/]+)\/bapplite\/#app\/todos\/project-([^/?#]+)(?:\/list-([^/?#]+))?(?:\/task-([^/?#]+))?/.exec(
-    url.trim(),
-  );
+  const match =
+    /^https?:\/\/([^/]+)\/bapplite\/#app\/todos\/project-([^/?#]+)(?:\/list-([^/?#]+))?(?:\/task-([^/?#]+))?/.exec(
+      url.trim(),
+    );
   if (!match) {
     return undefined;
   }

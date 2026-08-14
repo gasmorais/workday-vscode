@@ -1,3 +1,4 @@
+import { t } from "./locales/index.js";
 export function parseHours(value: string | number | undefined): number {
   if (value === undefined || value === null || value === "") {
     return 0;
@@ -58,26 +59,15 @@ export function weekKey(value: string | number | null | undefined): string {
 }
 
 export function monthLabel(key: string): string {
-  const months = [
-    "janeiro",
-    "fevereiro",
-    "março",
-    "abril",
-    "maio",
-    "junho",
-    "julho",
-    "agosto",
-    "setembro",
-    "outubro",
-    "novembro",
-    "dezembro",
-  ];
   const [year, month] = key.split("-");
-  const name = months[Number(month) - 1];
-  return name ? `${name} de ${year}` : key;
+  const name = t.calendar.months[Number(month) - 1];
+  return name ? t.calendar.monthOfYear(name, year) : key;
 }
 
-export function shortDate(value: string | number | null | undefined, reference = new Date()): string {
+export function shortDate(
+  value: string | number | null | undefined,
+  reference = new Date(),
+): string {
   const date = toDate(value);
   if (!date) {
     return "";
@@ -89,11 +79,18 @@ export function shortDate(value: string | number | null | undefined, reference =
     : `${day}/${month}/${date.getUTCFullYear()}`;
 }
 
-export function daysUntil(value: string | number | null | undefined, reference = new Date()): number | undefined {
+export function daysUntil(
+  value: string | number | null | undefined,
+  reference = new Date(),
+): number | undefined {
   const date = toDate(value);
   if (!date) {
     return undefined;
   }
-  const start = Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate());
+  const start = Date.UTC(
+    reference.getUTCFullYear(),
+    reference.getUTCMonth(),
+    reference.getUTCDate(),
+  );
   return Math.round((date.getTime() - start) / 86_400_000);
 }

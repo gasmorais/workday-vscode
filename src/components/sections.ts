@@ -1,9 +1,17 @@
 import { escapeHtml, richText } from "../html.js";
-import { t } from "../strings.js";
-import { estimateOf as estimateMinutes, minutesOf, type Comment, type Subtask, type Task, type TimeEntry } from "../types.js";
+import { t } from "../locales/index.js";
+import {
+  estimateOf as estimateMinutes,
+  minutesOf,
+  type Comment,
+  type Subtask,
+  type Task,
+  type TimeEntry,
+} from "../types.js";
 import { daysUntil, formatMinutes, formatWhen, shortDate } from "../format.js";
 import { button, chip, empty, field, form, linkButton, list, section } from "./ui.js";
 import { alerts } from "./alerts.js";
+import { HOURS_PATTERN } from "../constants.js";
 
 export type LoggedEntry = TimeEntry & { authorName?: string; targetTitle?: string };
 
@@ -54,7 +62,11 @@ export function header(view: TaskView): string {
   ].join("");
 }
 
-export function dueChip(due: string | null | undefined, completed?: boolean, now = new Date()): string {
+export function dueChip(
+  due: string | null | undefined,
+  completed?: boolean,
+  now = new Date(),
+): string {
   if (!due) {
     return "";
   }
@@ -116,13 +128,13 @@ export function subtasks(items: Subtask[], problem?: string): string {
     (item) =>
       `<li><input type="checkbox" data-subtask="${escapeHtml(item.id)}"${
         item.completed ? " checked" : ""
-      }><span class="grow">${linkButton(
-        "openSubtask",
-        item.title,
-        String(item.id),
-      ).replace('class="as-link"', `class="as-link${item.completed ? " done" : ""}"`)}</span>${
-        dueChip(item.due_date, item.completed)
-      }${minutesOf(item) > 0 ? chip(formatMinutes(minutesOf(item)), "quiet") : ""}${
+      }><span class="grow">${linkButton("openSubtask", item.title, String(item.id)).replace(
+        'class="as-link"',
+        `class="as-link${item.completed ? " done" : ""}"`,
+      )}</span>${dueChip(
+        item.due_date,
+        item.completed,
+      )}${minutesOf(item) > 0 ? chip(formatMinutes(minutesOf(item)), "quiet") : ""}${
         item.assigned?.length ? chip(t.tree.people(item.assigned.length), "quiet") : ""
       }</li>`,
   );
@@ -130,7 +142,9 @@ export function subtasks(items: Subtask[], problem?: string): string {
   return section(
     t.detail.subtasks,
     items.length > 0 ? `${done}/${items.length}` : undefined,
-    (rows.length > 0 ? list("subtasks", rows) : empty(problem ? t.common.sectionFailed(problem) : t.detail.noSubtasks)) +
+    (rows.length > 0
+      ? list("subtasks", rows)
+      : empty(problem ? t.common.sectionFailed(problem) : t.detail.noSubtasks)) +
       form(
         "subtask",
         field({ name: "title", placeholder: t.detail.newSubtask, autocomplete: "off" }),
@@ -157,10 +171,17 @@ export function time(entries: LoggedEntry[], problem?: string): string {
     entries.length > 0
       ? formatMinutes(entries.reduce((total, entry) => total + minutesOf(entry), 0))
       : undefined,
-    (rows.length > 0 ? list("time", rows) : empty(problem ? t.common.sectionFailed(problem) : t.detail.noTime)) +
+    (rows.length > 0
+      ? list("time", rows)
+      : empty(problem ? t.common.sectionFailed(problem) : t.detail.noTime)) +
       form(
         "time",
-        field({ name: "hours", value: "1:00", size: "5", pattern: "\\d{1,3}:[0-5]\\d" }) +
+        field({
+          name: "hours",
+          value: "1:00",
+          size: "5",
+          pattern: HOURS_PATTERN.source.slice(1, -1),
+        }) +
           field({
             name: "description",
             placeholder: t.detail.whatPlaceholder,
@@ -181,7 +202,9 @@ export function comments(items: (Comment & { authorName?: string })[], problem?:
   return section(
     t.detail.comments,
     items.length > 0 ? String(items.length) : undefined,
-    (rows.length > 0 ? list("comments", rows) : empty(problem ? t.common.sectionFailed(problem) : t.detail.noComments)) +
+    (rows.length > 0
+      ? list("comments", rows)
+      : empty(problem ? t.common.sectionFailed(problem) : t.detail.noComments)) +
       form(
         "comment",
         `<textarea name="content" rows="3" placeholder="${escapeHtml(

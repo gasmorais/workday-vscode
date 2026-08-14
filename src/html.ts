@@ -67,8 +67,11 @@ export function escapeHtml(value: unknown): string {
 export function decodeEntities(value: unknown): string {
   return String(value ?? "").replace(/&(#x?[0-9a-f]+|[a-z][a-z0-9]*);/gi, (whole, body: string) => {
     if (body.startsWith("#")) {
-      const code = body[1] === "x" || body[1] === "X" ? parseInt(body.slice(2), 16) : Number(body.slice(1));
-      return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+      const code =
+        body[1] === "x" || body[1] === "X" ? parseInt(body.slice(2), 16) : Number(body.slice(1));
+      return Number.isFinite(code) && code > 0 && code <= 0x10ffff
+        ? String.fromCodePoint(code)
+        : whole;
     }
     return NAMED[body] ?? NAMED[body.toLowerCase()] ?? whole;
   });
@@ -92,10 +95,7 @@ const KEEP_AS = new Map([
 ]);
 
 export function richText(source: unknown): string {
-  const markup = unescapeSource(source).replace(
-    /<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,
-    "",
-  );
+  const markup = unescapeSource(source).replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "");
   const tag = /<(\/?)([a-z0-9]+)((?:"[^"]*"|'[^']*'|[^>])*)>/gi;
   const stack: string[] = [];
   const out: string[] = [];
@@ -154,7 +154,10 @@ export function richText(source: unknown): string {
       out.push(`</${closeAs}>`);
     }
   }
-  return out.join("").replace(/(<p>\s*<\/p>)+/g, "").trim();
+  return out
+    .join("")
+    .replace(/(<p>\s*<\/p>)+/g, "")
+    .trim();
 }
 
 function openLink(attributes: string): string {

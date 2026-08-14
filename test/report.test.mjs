@@ -27,16 +27,22 @@ test("a semana começa na segunda, então o dia 11 entra na semana do dia 14", (
 
 test("os meses vêm do mais recente para o mais antigo, com nome em português", () => {
   const relatorio = buildReport(lancamentos, { reference: hoje });
-  assert.deepEqual(relatorio.months.map((mes) => mes.key), ["2026-08", "2026-07"]);
+  assert.deepEqual(
+    relatorio.months.map((mes) => mes.key),
+    ["2026-08", "2026-07"],
+  );
   assert.equal(monthLabel("2026-08"), "agosto de 2026");
 });
 
 test("por projeto ordena pelo maior tempo, não pelo nome", () => {
   const relatorio = buildReport(lancamentos, { reference: hoje });
-  assert.deepEqual(relatorio.projects.map((projeto) => [projeto.label, projeto.hours]), [
-    ["Corteva", "10:30"],
-    ["Produtos", "5:45"],
-  ]);
+  assert.deepEqual(
+    relatorio.projects.map((projeto) => [projeto.label, projeto.hours]),
+    [
+      ["Corteva", "10:30"],
+      ["Produtos", "5:45"],
+    ],
+  );
 });
 
 test("o tempo estimado em aberto vem de fora e é formatado igual", () => {
@@ -53,7 +59,10 @@ test("o tempo vem em horas e minutos separados, e minuto sozinho também conta",
 
 test("os lançamentos saem do mais recente para o mais antigo", () => {
   const relatorio = buildReport(lancamentos, { reference: hoje });
-  assert.deepEqual(relatorio.entries.map((entrada) => entrada.id), [1, 2, 3, 4]);
+  assert.deepEqual(
+    relatorio.entries.map((entrada) => entrada.id),
+    [1, 2, 3, 4],
+  );
 });
 
 test("o lançamento é reconhecido pela tarefa e também pela subtarefa", () => {

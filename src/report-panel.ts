@@ -4,8 +4,9 @@ import { page } from "./components/shell.js";
 import { renderReport } from "./components/report-view.js";
 import { parseHours } from "./format.js";
 import { buildReport, type Logged } from "./report.js";
-import { t } from "./strings.js";
+import { t } from "./locales/index.js";
 import { estimateOf, sameId, type Person } from "./types.js";
+import { CONFIG_SECTION } from "./constants.js";
 
 export class ReportPanel {
   private panel: vscode.WebviewPanel | undefined;
@@ -50,7 +51,7 @@ export class ReportPanel {
         return;
       }
       const goal = parseHours(
-        vscode.workspace.getConfiguration("proofhub").get<string>("dailyGoal", "8:00"),
+        vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>("dailyGoal", "8:00"),
       );
       this.panel.webview.html = page(
         renderReport(buildReport(data.entries, { estimatedOpenMinutes: data.estimated }), {
@@ -105,7 +106,9 @@ export class ReportPanel {
               break;
             }
             for (const task of await client.tasks(project.id, todolist.id).catch(() => [])) {
-              const mine = me ? (task.assigned ?? []).some((id) => sameId(id, me.id)) : Boolean(task.by_me);
+              const mine = me
+                ? (task.assigned ?? []).some((id) => sameId(id, me.id))
+                : Boolean(task.by_me);
               if (task.completed || (this.onlyMine && !mine)) {
                 continue;
               }

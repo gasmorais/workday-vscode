@@ -1,4 +1,22 @@
-export const t = {
+export const ptBR = {
+  calendar: {
+    months: [
+      "janeiro",
+      "fevereiro",
+      "março",
+      "abril",
+      "maio",
+      "junho",
+      "julho",
+      "agosto",
+      "setembro",
+      "outubro",
+      "novembro",
+      "dezembro",
+    ],
+    weekdays: ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"],
+    monthOfYear: (month: string, year: string) => `${month} de ${year}`,
+  },
   connect: {
     title: (account: string) => `Conectar em ${account}`,
     detail:
@@ -12,7 +30,7 @@ export const t = {
     tryPaste: "Colar na mão",
     accountTitle: "Conta do ProofHub",
     accountPrompt: "O endereço da sua conta do ProofHub",
-    accountInvalid: "Informe um endereço como acme.proofhub.com",
+    accountInvalid: "Informe um endereço como suaempresa.proofhub.com",
     keyPrompt: "Cole a chave da API mostrada na tela de acesso à API",
     keyEmpty: "A chave não pode ficar vazia",
     checking: (account: string) => `Conferindo a chave de ${account}`,
@@ -65,7 +83,8 @@ export const t = {
     alreadyRunning: (title: string) => `Já existe um cronômetro rodando em ${title}.`,
     notRunning: "Nenhum cronômetro está rodando.",
     stopHint: "Clique para parar e lançar as horas no ProofHub",
-    stopHintMany: (count: number) => `${count} cronômetros rodando. Clique para escolher qual parar`,
+    stopHintMany: (count: number) =>
+      `${count} cronômetros rodando. Clique para escolher qual parar`,
     pickToStop: "Qual cronômetro parar",
     alreadyOnThis: (title: string) => `O cronômetro de ${title} já está rodando.`,
     running: (title: string, elapsed: string) => `${title}, ${elapsed}`,
@@ -86,14 +105,16 @@ export const t = {
       `Esse link é da conta ${link}, mas você está conectado em ${current}.`,
   },
   layout: {
-    cannotMove: "Esta versão do VS Code não move painéis por comando. Arraste o ícone do ProofHub para a barra da direita uma vez.",
+    cannotMove:
+      "Esta versão do VS Code não move painéis por comando. Arraste o ícone do ProofHub para a barra da direita uma vez.",
   },
   flow: {
     loadingProjects: "Carregando projetos",
     loadingLists: "Carregando listas",
     pickProject: "Em qual projeto",
     pickList: (project: string) => `Em qual lista de ${project}`,
-    noLists: (project: string) => `O projeto ${project} não tem nenhuma lista para receber a tarefa.`,
+    noLists: (project: string) =>
+      `O projeto ${project} não tem nenhuma lista para receber a tarefa.`,
     assignTo: "Responsáveis",
     assignHint: "Selecione quantas pessoas quiser, ou nenhuma",
     estimateTitle: "Tempo estimado",
@@ -146,7 +167,8 @@ export const t = {
     thisSubtask: "esta subtarefa",
     logNow: "Lançar horas agora",
     runningTitle: "Cronômetro em andamento",
-    runningText: (elapsed: string) => `Contando ${elapsed} até agora. Ao parar, o tempo é lançado no ProofHub.`,
+    runningText: (elapsed: string) =>
+      `Contando ${elapsed} até agora. Ao parar, o tempo é lançado no ProofHub.`,
     runningLong: (elapsed: string) =>
       `Já são ${elapsed} de cronômetro. Confira se você esqueceu de parar em algum momento.`,
     overdueTitle: "Prazo estourado",
@@ -173,7 +195,8 @@ export const t = {
     noEstimateText: (kind: string, logged: string) =>
       `Há ${logged} lançados em ${kind}, mas nenhuma estimativa para comparar.`,
     noOwnerTitle: "Sem responsável",
-    noOwnerText: (kind: string) => `Ninguém está atribuído a ${kind}, então ela não aparece na fila de nenhuma pessoa.`,
+    noOwnerText: (kind: string) =>
+      `Ninguém está atribuído a ${kind}, então ela não aparece na fila de nenhuma pessoa.`,
   },
   detail: {
     status: { open: "em aberto", done: "concluída" },
@@ -216,3 +239,5 @@ export const t = {
     billable: "Marcado como faturável no ProofHub",
   },
 };
+
+export type Strings = typeof ptBR;

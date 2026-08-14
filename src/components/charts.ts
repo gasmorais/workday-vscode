@@ -1,8 +1,7 @@
 import { escapeHtml } from "../html.js";
+import { t } from "../locales/index.js";
 import { formatMinutes, toDate } from "../format.js";
 import type { Bucket } from "../report.js";
-
-const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
 export function columnChart(
   rows: Bucket[],
@@ -65,5 +64,5 @@ export function weekdayLabel(key: string): string {
   if (!date) {
     return key;
   }
-  return `${WEEKDAYS[date.getUTCDay()]} ${String(date.getUTCDate()).padStart(2, "0")}`;
+  return `${t.calendar.weekdays[date.getUTCDay()]} ${String(date.getUTCDate()).padStart(2, "0")}`;
 }

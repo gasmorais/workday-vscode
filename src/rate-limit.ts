@@ -1,3 +1,5 @@
+import { RATE_LIMIT, RATE_WINDOW_MS } from "./constants.js";
+
 export interface RateLimitOptions {
   limit?: number;
   windowMs?: number;
@@ -15,8 +17,8 @@ export class RateLimiter {
   private pausedUntil = 0;
 
   constructor(options: RateLimitOptions = {}) {
-    this.limit = options.limit ?? 25;
-    this.windowMs = options.windowMs ?? 10_000;
+    this.limit = options.limit ?? RATE_LIMIT;
+    this.windowMs = options.windowMs ?? RATE_WINDOW_MS;
     this.now = options.now ?? (() => Date.now());
     this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   }

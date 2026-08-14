@@ -63,7 +63,10 @@ export function sortTasks(tasks: Task[], key: SortKey): Task[] {
       return left.title.localeCompare(right.title, "pt-BR");
     }
     if (key === "assigned") {
-      return (left.assigned?.length ?? 0) - (right.assigned?.length ?? 0) || left.title.localeCompare(right.title, "pt-BR");
+      return (
+        (left.assigned?.length ?? 0) - (right.assigned?.length ?? 0) ||
+        left.title.localeCompare(right.title, "pt-BR")
+      );
     }
     const leftDue = toDate(left.due_date)?.getTime();
     const rightDue = toDate(right.due_date)?.getTime();

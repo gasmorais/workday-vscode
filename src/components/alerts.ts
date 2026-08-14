@@ -1,9 +1,10 @@
 import { escapeHtml } from "../html.js";
 import { daysUntil, formatMinutes, shortDate } from "../format.js";
-import { t } from "../strings.js";
+import { t } from "../locales/index.js";
 import { estimateOf, minutesOf } from "../types.js";
 import { button } from "./ui.js";
 import type { TaskView } from "./sections.js";
+import { LONG_TIMER_MS, NEAR_ESTIMATE_RATIO } from "../constants.js";
 
 export type AlertLevel = "danger" | "warn" | "info";
 
@@ -13,8 +14,6 @@ export interface Alert {
   text: string;
   actions: string;
 }
-
-const RUNNING_SOON = 8 * 60 * 60 * 1000;
 
 function card(alert: Alert): string {
   return [
@@ -42,7 +41,7 @@ export function alertsOf(view: TaskView, now = new Date()): Alert[] {
 
   if (view.timerRunning && view.timerSince) {
     const elapsed = Math.max(0, now.getTime() - view.timerSince);
-    const long = elapsed >= RUNNING_SOON;
+    const long = elapsed >= LONG_TIMER_MS;
     found.push({
       level: long ? "warn" : "info",
       title: t.alerts.runningTitle,
@@ -61,7 +60,9 @@ export function alertsOf(view: TaskView, now = new Date()): Alert[] {
         level: "danger",
         title: t.alerts.overdueTitle,
         text: t.alerts.overdueText(kind, -days, label),
-        actions: button("complete", t.detail.complete, { variant: "primary" }) + button("open", t.detail.openBrowser, { variant: "ghost" }),
+        actions:
+          button("complete", t.detail.complete, { variant: "primary" }) +
+          button("open", t.detail.openBrowser, { variant: "ghost" }),
       });
     } else if (days === 0) {
       found.push({
@@ -93,10 +94,13 @@ export function alertsOf(view: TaskView, now = new Date()): Alert[] {
     found.push({
       level: "danger",
       title: t.alerts.overEstimateTitle,
-      text: t.alerts.overEstimateText(formatMinutes(estimate), formatMinutes(totalLogged - estimate)),
+      text: t.alerts.overEstimateText(
+        formatMinutes(estimate),
+        formatMinutes(totalLogged - estimate),
+      ),
       actions: button("open", t.detail.openBrowser, { variant: "ghost" }),
     });
-  } else if (estimate > 0 && totalLogged >= estimate * 0.8 && !done) {
+  } else if (estimate > 0 && totalLogged >= estimate * NEAR_ESTIMATE_RATIO && !done) {
     found.push({
       level: "warn",
       title: t.alerts.nearEstimateTitle,

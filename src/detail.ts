@@ -3,11 +3,12 @@ import { describeFailure, type Session } from "./auth.js";
 import { renderBody, type TaskView } from "./components/sections.js";
 import { page } from "./components/shell.js";
 import { parseHours } from "./format.js";
-import { t } from "./strings.js";
+import { t } from "./locales/index.js";
 import { today } from "./time.js";
 import type { Node } from "./tree.js";
 import { entryTargets, personName, sameId, type Id, type Person, type Subtask } from "./types.js";
 import type { LoggedEntry } from "./components/sections.js";
+import { HOURS_PATTERN } from "./constants.js";
 
 export interface TimerTarget {
   projectId: Id;
@@ -301,7 +302,7 @@ export class TaskDetail {
         }
         case "time": {
           const hours = fields.hours?.trim();
-          if (!hours || !/^\d{1,3}:[0-5]\d$/.test(hours)) {
+          if (!hours || !HOURS_PATTERN.test(hours)) {
             vscode.window.showWarningMessage(t.time.hoursInvalid);
             return;
           }

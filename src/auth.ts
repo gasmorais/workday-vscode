@@ -3,9 +3,8 @@ import { ProofHubClient, ProofHubError, looksLikeKey, normalizeAccount } from ".
 import { personName, type Person } from "./types.js";
 import { watchClipboardForKey } from "./key-watch.js";
 import { verifyKey } from "./me.js";
-import { t } from "./strings.js";
-
-const SECRET_PREFIX = "proofhub.apiKey";
+import { t } from "./locales/index.js";
+import { ACCOUNT_PLACEHOLDER, CONFIG_SECTION, SECRET_PREFIX } from "./constants.js";
 
 export interface Session {
   account: string;
@@ -18,7 +17,7 @@ function secretKey(account: string): string {
 }
 
 function settings() {
-  return vscode.workspace.getConfiguration("proofhub");
+  return vscode.workspace.getConfiguration(CONFIG_SECTION);
 }
 
 function buildClient(account: string, apiKey: string): ProofHubClient {
@@ -60,7 +59,7 @@ export async function connect(
     const answer = await vscode.window.showInputBox({
       title: t.connect.accountTitle,
       prompt: t.connect.accountPrompt,
-      placeHolder: "acme.proofhub.com",
+      placeHolder: ACCOUNT_PLACEHOLDER,
       value: configured,
       ignoreFocusOut: true,
       validateInput: (value) => {
@@ -84,8 +83,7 @@ export async function connect(
     t.connect.title(account),
     {
       modal: true,
-      detail:
-        t.connect.detail,
+      detail: t.connect.detail,
     },
     t.connect.openBrowser,
     t.connect.pasteMyself,
@@ -113,23 +111,26 @@ export async function connect(
       },
       async (progress, token) => {
         progress.report({ message: t.connect.waitingHint });
-        return watchClipboardForKey({
-          readClipboard: () => Promise.resolve(vscode.env.clipboard.readText()),
-          validate: async (candidate) => {
-            try {
-              person = await verifyKey(buildClient(account, candidate));
-              return true;
-            } catch (error) {
-              if (error instanceof ProofHubError && !error.isAuthFailure) {
-                throw error;
+        return watchClipboardForKey(
+          {
+            readClipboard: () => Promise.resolve(vscode.env.clipboard.readText()),
+            validate: async (candidate) => {
+              try {
+                person = await verifyKey(buildClient(account, candidate));
+                return true;
+              } catch (error) {
+                if (error instanceof ProofHubError && !error.isAuthFailure) {
+                  throw error;
+                }
+                return false;
               }
-              return false;
-            }
+            },
+            sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+            now: () => Date.now(),
+            isCancelled: () => token.isCancellationRequested,
           },
-          sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-          now: () => Date.now(),
-          isCancelled: () => token.isCancellationRequested,
-        }, { baseline });
+          { baseline },
+        );
       },
     );
 
@@ -139,10 +140,7 @@ export async function connect(
     if (captured.status === "found") {
       apiKey = captured.key;
     } else {
-      const retry = await vscode.window.showWarningMessage(
-        t.connect.notFound,
-        t.connect.tryPaste,
-      );
+      const retry = await vscode.window.showWarningMessage(t.connect.notFound, t.connect.tryPaste);
       if (!retry) {
         return undefined;
       }

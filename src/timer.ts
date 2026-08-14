@@ -1,9 +1,8 @@
 import * as vscode from "vscode";
 import { formatDuration } from "./time.js";
-import { t } from "./strings.js";
+import { t } from "./locales/index.js";
 import { sameId, type Id } from "./types.js";
-
-const STATE_KEY = "proofhub.runningTimers";
+import { STATE_RUNNING_TIMERS } from "./constants.js";
 
 export interface RunningTimer {
   projectId: Id;
@@ -26,7 +25,7 @@ export class Timer {
   }
 
   get all(): RunningTimer[] {
-    return this.context.globalState.get<RunningTimer[]>(STATE_KEY) ?? [];
+    return this.context.globalState.get<RunningTimer[]>(STATE_RUNNING_TIMERS) ?? [];
   }
 
   on(taskId: Id): RunningTimer | undefined {
@@ -51,7 +50,7 @@ export class Timer {
   }
 
   private async write(timers: RunningTimer[]): Promise<void> {
-    await this.context.globalState.update(STATE_KEY, timers);
+    await this.context.globalState.update(STATE_RUNNING_TIMERS, timers);
     this.render();
   }
 

@@ -37,11 +37,14 @@ test("cronômetro rodando também conta como tempo em andamento", () => {
 });
 
 test("cronômetro esquecido por muitas horas vira alerta laranja", () => {
-  const [alert] = alertsOf({
-    ...base,
-    timerRunning: true,
-    timerSince: now.getTime() - 9 * 60 * 60 * 1000,
-  }, now);
+  const [alert] = alertsOf(
+    {
+      ...base,
+      timerRunning: true,
+      timerSince: now.getTime() - 9 * 60 * 60 * 1000,
+    },
+    now,
+  );
   assert.equal(alert.level, "warn");
   assert.ok(alert.text.includes("9:00"));
 });

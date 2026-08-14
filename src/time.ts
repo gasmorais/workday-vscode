@@ -8,4 +8,3 @@ export function formatDuration(ms: number): string {
 export function today(now = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
-

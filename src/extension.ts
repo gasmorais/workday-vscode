@@ -7,13 +7,15 @@ import { parseHours } from "./format.js";
 import { sameId, type Id } from "./types.js";
 import { resolveMe } from "./me.js";
 import { parseAppUrl } from "./urls.js";
-import { t } from "./strings.js";
+import { t, useLocale } from "./locales/index.js";
 import { TaskDetail, type TimerTarget } from "./detail.js";
 import { ReportPanel } from "./report-panel.js";
 import { createTask as runCreateTask } from "./flows/create-task.js";
 import { EMPTY_FILTER, isActive, type SortKey } from "./filter.js";
+import { CONFIG_SECTION, HOURS_PATTERN } from "./constants.js";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  useLocale(vscode.env.language);
   const provider = new ProjectsProvider();
   const timer = new Timer(context);
   let session: Session | undefined = await restoreSession(context);
@@ -85,7 +87,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   });
 
   if (
-    vscode.workspace.getConfiguration("proofhub").get<boolean>("openOnRight", true) &&
+    vscode.workspace.getConfiguration(CONFIG_SECTION).get<boolean>("openOnRight", true) &&
     !context.globalState.get<boolean>("movedToRight")
   ) {
     await context.globalState.update("movedToRight", true);
@@ -125,7 +127,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (!state.focused || !session) {
         return;
       }
-      if (!vscode.workspace.getConfiguration("proofhub").get<boolean>("syncOnFocus", true)) {
+      if (!vscode.workspace.getConfiguration(CONFIG_SECTION).get<boolean>("syncOnFocus", true)) {
         return;
       }
       provider.refresh();
@@ -170,8 +172,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       prompt: t.link.prompt,
       value: parseAppUrl(clipboard) ? clipboard : "",
       ignoreFocusOut: true,
-      validateInput: (value) =>
-        !value.trim() || parseAppUrl(value) ? undefined : t.link.invalid,
+      validateInput: (value) => (!value.trim() || parseAppUrl(value) ? undefined : t.link.invalid),
     });
     if (!input) {
       return;
@@ -201,7 +202,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           return;
         }
         const todolists = await active.client.todolists(project.id);
-        const todolist = todolists.find((candidate) => idMatches(candidate.id, location.todolistId!));
+        const todolist = todolists.find((candidate) =>
+          idMatches(candidate.id, location.todolistId!),
+        );
         if (!todolist) {
           await view.reveal({ kind: "project", project }, { expand: true });
           return;
@@ -412,7 +415,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       prompt: t.time.hoursPrompt,
       value: "1:00",
       ignoreFocusOut: true,
-      validateInput: (value) => (/^\d{1,3}:[0-5]\d$/.test(value.trim()) ? undefined : t.time.hoursInvalid),
+      validateInput: (value) =>
+        HOURS_PATTERN.test(value.trim()) ? undefined : t.time.hoursInvalid,
     });
     if (!hours) {
       return;
@@ -455,7 +459,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
               break;
             }
             for (const task of await active.client.tasks(project.id, todolist.id)) {
-              if (!task.completed && (me ? (task.assigned ?? []).some((id) => sameId(id, me.id)) : task.by_me)) {
+              if (
+                !task.completed &&
+                (me ? (task.assigned ?? []).some((id) => sameId(id, me.id)) : task.by_me)
+              ) {
                 found.push({
                   label: task.title,
                   description: `${project.title} › ${todolist.title}`,
@@ -491,9 +498,7 @@ async function moveViewToRight(): Promise<void> {
     "workbench.action.moveViewToSecondarySideBar",
   ].find((id) => available.has(id));
   if (!move) {
-    vscode.window.showInformationMessage(
-      t.layout.cannotMove,
-    );
+    vscode.window.showInformationMessage(t.layout.cannotMove);
     return;
   }
   await vscode.commands.executeCommand(move);

@@ -1,9 +1,8 @@
 import * as vscode from "vscode";
 import { ProofHubError, type ProofHubClient } from "./client.js";
-import { t } from "./strings.js";
+import { t } from "./locales/index.js";
 import { personName, sameId, type Id, type Person } from "./types.js";
-
-const STATE_KEY = "proofhub.myPersonId";
+import { CONFIG_SECTION, STATE_MY_PERSON } from "./constants.js";
 
 export async function verifyKey(client: ProofHubClient): Promise<Person | undefined> {
   try {
@@ -23,7 +22,7 @@ export async function resolveMe(
   options: { ask?: boolean } = {},
 ): Promise<Person | undefined> {
   const people = await client.people().catch<Person[]>(() => []);
-  const stored = context.globalState.get<Id>(STATE_KEY);
+  const stored = context.globalState.get<Id>(STATE_MY_PERSON);
   const known = people.find((person) => sameId(person.id, stored));
   if (known) {
     return known;
@@ -31,16 +30,19 @@ export async function resolveMe(
 
   const direct = await client.me().catch(() => undefined);
   if (direct?.id !== undefined) {
-    await context.globalState.update(STATE_KEY, direct.id);
+    await context.globalState.update(STATE_MY_PERSON, direct.id);
     return people.find((person) => sameId(person.id, direct.id)) ?? direct;
   }
 
-  const email = vscode.workspace.getConfiguration("proofhub").get<string>("contactEmail")?.trim();
+  const email = vscode.workspace
+    .getConfiguration(CONFIG_SECTION)
+    .get<string>("contactEmail")
+    ?.trim();
   const byEmail = email
     ? people.find((person) => person.email?.toLowerCase() === email.toLowerCase())
     : undefined;
   if (byEmail) {
-    await context.globalState.update(STATE_KEY, byEmail.id);
+    await context.globalState.update(STATE_MY_PERSON, byEmail.id);
     return byEmail;
   }
 
@@ -56,15 +58,15 @@ export async function resolveMe(
   if (!picked) {
     return undefined;
   }
-  await context.globalState.update(STATE_KEY, picked.person.id);
+  await context.globalState.update(STATE_MY_PERSON, picked.person.id);
   if (picked.person.email && !email) {
     await vscode.workspace
-      .getConfiguration("proofhub")
+      .getConfiguration(CONFIG_SECTION)
       .update("contactEmail", picked.person.email, vscode.ConfigurationTarget.Global);
   }
   return picked.person;
 }
 
 export async function forgetMe(context: vscode.ExtensionContext): Promise<void> {
-  await context.globalState.update(STATE_KEY, undefined);
+  await context.globalState.update(STATE_MY_PERSON, undefined);
 }

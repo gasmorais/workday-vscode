@@ -27,7 +27,9 @@ test("a estrutura vira lista e parágrafos de verdade", () => {
 
 test("o link do sharepoint continua clicável", () => {
   const html = richText(REAL);
-  assert.ok(html.includes('<a href="https://example.sharepoint.com/:x:/g/personal/x/Ev"'));
+  assert.ok(
+    html.includes('<a href="https://example.sharepoint.com/:x:/g/personal/x/Ev"'),
+  );
   assert.ok(html.includes("Modelo_Solicitação"));
 });
 

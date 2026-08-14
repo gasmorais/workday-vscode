@@ -1,7 +1,7 @@
 {
   "name": "proofhub",
   "displayName": "ProofHub",
-  "description": "Veja e atualize projetos, tarefas, comentários e horas do ProofHub sem sair do editor.",
+  "description": "%extension.description%",
   "version": "0.1.0",
   "publisher": "proofhub-vscode",
   "private": true,
@@ -28,109 +28,109 @@
       "proofhub": [
         {
           "id": "proofhub.projects",
-          "name": "Projetos"
+          "name": "%view.projects%"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "proofhub.projects",
-        "contents": "Conecte no ProofHub para ver seus projetos e tarefas aqui.\n[Conectar no ProofHub](command:proofhub.connect)\n\nA chave é pessoal, validada na conexão e guardada no cofre de segredos do VS Code, só nesta máquina."
+        "contents": "%welcome.contents%"
       }
     ],
     "commands": [
       {
         "command": "proofhub.connect",
-        "title": "ProofHub: Conectar",
+        "title": "%command.connect%",
         "icon": "$(plug)"
       },
       {
         "command": "proofhub.disconnect",
-        "title": "ProofHub: Desconectar"
+        "title": "%command.disconnect%"
       },
       {
         "command": "proofhub.refresh",
-        "title": "ProofHub: Atualizar",
+        "title": "%command.refresh%",
         "icon": "$(refresh)"
       },
       {
         "command": "proofhub.openTask",
-        "title": "ProofHub: Abrir tarefa",
+        "title": "%command.openTask%",
         "icon": "$(preview)"
       },
       {
         "command": "proofhub.createTask",
-        "title": "ProofHub: Nova tarefa",
+        "title": "%command.createTask%",
         "icon": "$(add)"
       },
       {
         "command": "proofhub.completeTask",
-        "title": "ProofHub: Concluir tarefa",
+        "title": "%command.completeTask%",
         "icon": "$(check)"
       },
       {
         "command": "proofhub.comment",
-        "title": "ProofHub: Comentar",
+        "title": "%command.comment%",
         "icon": "$(comment)"
       },
       {
         "command": "proofhub.openInBrowser",
-        "title": "ProofHub: Abrir no navegador",
+        "title": "%command.openInBrowser%",
         "icon": "$(link-external)"
       },
       {
         "command": "proofhub.startTimer",
-        "title": "ProofHub: Iniciar cronômetro",
+        "title": "%command.startTimer%",
         "icon": "$(play)"
       },
       {
         "command": "proofhub.stopTimer",
-        "title": "ProofHub: Parar cronômetro e lançar horas",
+        "title": "%command.stopTimer%",
         "icon": "$(stop)"
       },
       {
         "command": "proofhub.logTime",
-        "title": "ProofHub: Lançar horas"
+        "title": "%command.logTime%"
       },
       {
         "command": "proofhub.myTasks",
-        "title": "ProofHub: Minhas tarefas"
+        "title": "%command.myTasks%"
       },
       {
         "command": "proofhub.openUrl",
-        "title": "ProofHub: Abrir link"
+        "title": "%command.openUrl%"
       },
       {
         "command": "proofhub.changeAccount",
-        "title": "ProofHub: Trocar de conta"
+        "title": "%command.changeAccount%"
       },
       {
         "command": "proofhub.moveToRight",
-        "title": "ProofHub: Mover painel para a barra da direita"
+        "title": "%command.moveToRight%"
       },
       {
         "command": "proofhub.report",
-        "title": "ProofHub: Horas e gráficos",
+        "title": "%command.report%",
         "icon": "$(graph)"
       },
       {
         "command": "proofhub.search",
-        "title": "ProofHub: Buscar tarefas",
+        "title": "%command.search%",
         "icon": "$(search)"
       },
       {
         "command": "proofhub.filter",
-        "title": "ProofHub: Filtrar tarefas",
+        "title": "%command.filter%",
         "icon": "$(filter)"
       },
       {
         "command": "proofhub.clearFilter",
-        "title": "ProofHub: Limpar filtros",
+        "title": "%command.clearFilter%",
         "icon": "$(filter-filled)"
       },
       {
         "command": "proofhub.sort",
-        "title": "ProofHub: Ordenar tarefas",
+        "title": "%command.sort%",
         "icon": "$(list-ordered)"
       }
     ],
@@ -220,38 +220,38 @@
       "properties": {
         "proofhub.account": {
           "type": "string",
-          "default": "acme.proofhub.com",
-          "description": "Endereço da conta do ProofHub. Já vem apontado para a conta da sua empresa."
+          "default": "",
+          "description": "%config.account%"
         },
         "proofhub.contactEmail": {
           "type": "string",
           "default": "",
-          "description": "E-mail de contato enviado no cabeçalho User-Agent, exigido pela API do ProofHub."
+          "description": "%config.contactEmail%"
         },
         "proofhub.archivedProjects": {
           "type": "boolean",
           "default": false,
-          "description": "Incluir projetos arquivados na árvore."
+          "description": "%config.archivedProjects%"
         },
         "proofhub.apiPagePath": {
           "type": "string",
           "default": "bapplite/#app/me/api",
-          "description": "Caminho da página de acesso à API, aberta pelo comando Conectar. Ajuste se o ProofHub mudar o endereço."
+          "description": "%config.apiPagePath%"
         },
         "proofhub.openOnRight": {
           "type": "boolean",
           "default": true,
-          "description": "Mover o painel do ProofHub para a barra lateral direita na primeira vez que ele abre."
+          "description": "%config.openOnRight%"
         },
         "proofhub.syncOnFocus": {
           "type": "boolean",
           "default": true,
-          "description": "Recarregar projetos e a tarefa aberta sempre que a janela do VS Code voltar ao foco."
+          "description": "%config.syncOnFocus%"
         },
         "proofhub.dailyGoal": {
           "type": "string",
           "default": "8:00",
-          "description": "Meta diária de horas, no formato H:MM. Vira a linha de referência do gráfico de dias."
+          "description": "%config.dailyGoal%"
         }
       }
     }
@@ -260,12 +260,14 @@
     "build": "tsc -p tsconfig.json",
     "watch": "tsc -w -p tsconfig.json",
     "test": "npm run build --silent && node --test test/*.test.mjs",
-    "check": "tsc --noEmit -p tsconfig.json && npm test --silent"
+    "check": "prettier --check . && tsc --noEmit -p tsconfig.json && npm test --silent",
+    "format": "prettier --write ."
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.90.0",
     "@vscode/vsce": "^3.9.2",
+    "prettier": "^3.9.6",
     "typescript": "^5.6.0"
   },
   "capabilities": {

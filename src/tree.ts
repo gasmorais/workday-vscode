@@ -6,7 +6,8 @@ import { personName } from "./types.js";
 import { applyFilter, EMPTY_FILTER, sortTasks, type SortKey, type TaskFilter } from "./filter.js";
 import { firstLine } from "./html.js";
 import { formatMinutes, toDate } from "./format.js";
-import { t } from "./strings.js";
+import { t } from "./locales/index.js";
+import { CONFIG_SECTION, TREE_CACHE_MS } from "./constants.js";
 
 export type Node =
   | { kind: "project"; project: Project }
@@ -17,7 +18,9 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
   private readonly changed = new vscode.EventEmitter<Node | undefined>();
   readonly onDidChangeTreeData = this.changed.event;
   private session: Session | undefined;
-  private readonly cache = new Map<string, Node[]>();
+  private readonly cache = new Map<string, { at: number; nodes: Node[] }>();
+  private readonly inFlight = new Map<string, Promise<Node[]>>();
+  private now: () => number = () => Date.now();
   private names = new Map<string, string>();
   filter: TaskFilter = { ...EMPTY_FILTER };
   sort: SortKey = "list";
@@ -31,12 +34,12 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
 
   setFilter(filter: TaskFilter): void {
     this.filter = filter;
-    this.refresh();
+    this.redraw();
   }
 
   setSort(sort: SortKey): void {
     this.sort = sort;
-    this.refresh();
+    this.redraw();
   }
 
   nameOf(id: string): string {
@@ -57,7 +60,29 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
     } else {
       this.cache.clear();
     }
+    this.inFlight.clear();
     this.changed.fire(node);
+  }
+
+  private redraw(): void {
+    this.changed.fire(undefined);
+  }
+
+  private fresh(key: string): Node[] | undefined {
+    const hit = this.cache.get(key);
+    if (!hit) {
+      return undefined;
+    }
+    if (this.now() - hit.at > TREE_CACHE_MS) {
+      this.cache.delete(key);
+      return undefined;
+    }
+    return hit.nodes;
+  }
+
+  private remember(key: string, nodes: Node[]): Node[] {
+    this.cache.set(key, { at: this.now(), nodes });
+    return nodes;
   }
 
   getParent(node: Node): Node | undefined {
@@ -97,7 +122,9 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
         const item = new vscode.TreeItem(node.task.title, vscode.TreeItemCollapsibleState.None);
         item.id = `task:${node.todolist.id}:${node.task.id}`;
         item.contextValue = "task";
-        item.iconPath = new vscode.ThemeIcon(node.task.completed ? "pass-filled" : "circle-large-outline");
+        item.iconPath = new vscode.ThemeIcon(
+          node.task.completed ? "pass-filled" : "circle-large-outline",
+        );
         item.description = taskDescription(node.task, (id) => this.nameOf(id));
         item.tooltip = taskTooltip(node);
         if (isOverdue(node.task)) {
@@ -120,44 +147,74 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
     if (!this.session) {
       return [];
     }
-    const { client } = this.session;
     const key = node ? cacheKey(node) : "root";
-    const cached = this.cache.get(key);
+    const cached = this.fresh(key);
     if (cached) {
-      return cached;
+      return this.arrange(node, cached);
     }
+    const pending = this.inFlight.get(key) ?? this.fetch(node, key);
+    this.inFlight.set(key, pending);
+    try {
+      return this.arrange(node, await pending);
+    } finally {
+      this.inFlight.delete(key);
+    }
+  }
+
+  private arrange(node: Node | undefined, nodes: Node[]): Node[] {
+    if (node?.kind !== "todolist") {
+      return nodes;
+    }
+    const tasks = nodes.flatMap((child) => (child.kind === "task" ? [child.task] : []));
+    return sortTasks(applyFilter(tasks, this.filter), this.sort).map((task) => ({
+      kind: "task",
+      project: node.project,
+      todolist: node.todolist,
+      task,
+    }));
+  }
+
+  private async fetch(node: Node | undefined, key: string): Promise<Node[]> {
+    if (!this.session) {
+      return [];
+    }
+    const { client } = this.session;
     try {
       if (!node) {
         const archived = vscode.workspace
-          .getConfiguration("proofhub")
+          .getConfiguration(CONFIG_SECTION)
           .get<boolean>("archivedProjects", false);
         const projects = await client.projects(archived);
-        const children: Node[] = projects.map((project) => ({ kind: "project", project }));
-        this.cache.set(key, children);
-        return children;
+        return this.remember(
+          key,
+          projects.map((project) => ({ kind: "project", project })),
+        );
       }
       if (node.kind === "project") {
         const todolists = await client.todolists(node.project.id);
-        const children: Node[] = todolists.map((todolist) => ({
-          kind: "todolist",
-          project: node.project,
-          todolist,
-        }));
-        this.cache.set(key, children);
-        return children;
+        return this.remember(
+          key,
+          todolists.map((todolist) => ({
+            kind: "todolist",
+            project: node.project,
+            todolist,
+          })),
+        );
       }
       if (node.kind === "todolist") {
-        await this.loadNames();
-        const all = await client.tasks(node.project.id, node.todolist.id);
-        const tasks = sortTasks(applyFilter(all, this.filter), this.sort);
-        const children: Node[] = tasks.map((task) => ({
-          kind: "task",
-          project: node.project,
-          todolist: node.todolist,
-          task,
-        }));
-        this.cache.set(key, children);
-        return children;
+        const [tasks] = await Promise.all([
+          client.tasks(node.project.id, node.todolist.id),
+          this.loadNames(),
+        ]);
+        return this.remember(
+          key,
+          tasks.map((task) => ({
+            kind: "task",
+            project: node.project,
+            todolist: node.todolist,
+            task,
+          })),
+        );
       }
       return [];
     } catch (error) {

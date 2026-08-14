@@ -1,6 +1,12 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { asArray, ProofHubClient, ProofHubError, looksLikeKey, normalizeAccount } from "../out/client.js";
+import {
+  asArray,
+  ProofHubClient,
+  ProofHubError,
+  looksLikeKey,
+  normalizeAccount,
+} from "../out/client.js";
 import { RateLimiter } from "../out/rate-limit.js";
 
 function reply(body, init = {}) {
