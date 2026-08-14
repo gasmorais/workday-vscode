@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { buildReport } from "../out/report.js";
 import { monthLabel, weekKey } from "../out/format.js";
+import { entryTargets } from "../out/types.js";
 
 const hoje = new Date("2026-08-14T09:00:00Z");
 const lancamentos = [
@@ -53,4 +54,11 @@ test("o tempo vem em horas e minutos separados, e minuto sozinho também conta",
 test("os lançamentos saem do mais recente para o mais antigo", () => {
   const relatorio = buildReport(lancamentos, { reference: hoje });
   assert.deepEqual(relatorio.entries.map((entrada) => entrada.id), [1, 2, 3, 4]);
+});
+
+test("o lançamento é reconhecido pela tarefa e também pela subtarefa", () => {
+  assert.deepEqual(entryTargets({ task: { id: 10 } }), [10]);
+  assert.deepEqual(entryTargets({ task: { id: 10 }, subtask: { id: 20 } }), [10, 20]);
+  assert.deepEqual(entryTargets({ task: null, task_id: 30 }), [30]);
+  assert.deepEqual(entryTargets({}), []);
 });

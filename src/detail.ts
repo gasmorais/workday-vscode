@@ -6,7 +6,8 @@ import { parseHours } from "./format.js";
 import { t } from "./strings.js";
 import { today } from "./time.js";
 import type { Node } from "./tree.js";
-import { personName, sameId, type Id, type Person, type Subtask, type TimeEntry } from "./types.js";
+import { entryTargets, personName, sameId, type Id, type Person, type Subtask } from "./types.js";
+import type { LoggedEntry } from "./components/sections.js";
 
 export interface TimerTarget {
   projectId: Id;
@@ -116,11 +117,15 @@ export class TaskDetail {
   private async taskView(session: Session, node: Node & { kind: "task" }): Promise<TaskView> {
     const { client } = session;
     const { project, todolist, task } = node;
-    const [fresh, subtasks, comments, time] = await Promise.all([
+    const subtasks = await settle(client.subtasks(project.id, todolist.id, task.id));
+    const targets = [
+      { id: task.id, title: task.title },
+      ...(subtasks.value ?? []).map((item) => ({ id: item.id, title: item.title })),
+    ];
+    const [fresh, comments, time] = await Promise.all([
       settle(client.task(project.id, todolist.id, task.id)),
-      settle(client.subtasks(project.id, todolist.id, task.id)),
       settle(client.comments(project.id, todolist.id, task.id)),
-      settle(this.timeOf(session, project.id, task.id)),
+      settle(this.timeOf(session, project.id, targets)),
     ]);
     this.node = { ...node, task: { ...task, ...(fresh.value ?? {}) } };
     const current = (this.node as Node & { kind: "task" }).task;
@@ -148,7 +153,7 @@ export class TaskDetail {
     const [fresh, comments, time] = await Promise.all([
       settle(client.subtask(project.id, todolist.id, task.id, subtaskId)),
       settle(client.subtaskComments(project.id, todolist.id, task.id, subtaskId)),
-      settle(this.timeOf(session, project.id, subtaskId)),
+      settle(this.timeOf(session, project.id, [{ id: subtaskId }])),
     ]);
     const subtask = { ...this.focused, ...(fresh.value ?? {}) } as Subtask;
     this.focused = subtask;
@@ -190,12 +195,33 @@ export class TaskDetail {
     return this.people;
   }
 
-  private async timeOf(session: Session, projectId: Id, taskId: Id): Promise<TimeEntry[]> {
+  private async timeOf(
+    session: Session,
+    projectId: Id,
+    wanted: { id: Id; title?: string }[],
+  ): Promise<LoggedEntry[]> {
     const sheets = await session.client.timesheets(projectId).catch(() => []);
     const pages = await Promise.all(
       sheets.map((sheet) => session.client.timeEntries(projectId, sheet.id).catch(() => [])),
     );
-    return pages.flat().filter((entry) => sameId(entry.task?.id, taskId));
+    const names = await this.names(session);
+    const main = wanted[0]?.id;
+    return pages
+      .flat()
+      .map((entry) => {
+        const targets = entryTargets(entry);
+        const match = wanted.find((item) => targets.some((id) => sameId(id, item.id)));
+        return match ? { entry, match } : undefined;
+      })
+      .filter((row): row is { entry: LoggedEntry; match: { id: Id; title?: string } } =>
+        Boolean(row),
+      )
+      .map(({ entry, match }) => ({
+        ...entry,
+        authorName: names.get(String(entry.creator?.id)),
+        targetTitle: sameId(match.id, main) ? undefined : match.title,
+      }))
+      .sort((left, right) => String(right.date ?? "").localeCompare(String(left.date ?? "")));
   }
 
   private async handle(message: { act?: string; id?: string; value?: unknown }): Promise<void> {

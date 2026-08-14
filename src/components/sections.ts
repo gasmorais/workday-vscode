@@ -4,6 +4,8 @@ import { estimateOf as estimateMinutes, minutesOf, type Comment, type Subtask, t
 import { formatMinutes, formatWhen } from "../format.js";
 import { button, chip, empty, field, form, linkButton, list, section } from "./ui.js";
 
+export type LoggedEntry = TimeEntry & { authorName?: string; targetTitle?: string };
+
 export interface TaskView {
   projectTitle: string;
   todolistTitle: string;
@@ -11,7 +13,7 @@ export interface TaskView {
   assignees: string[];
   subtasks: Subtask[];
   comments: (Comment & { authorName?: string })[];
-  time: TimeEntry[];
+  time: LoggedEntry[];
   timerRunning: boolean;
   isSubtask?: boolean;
   parentTitle?: string;
@@ -106,12 +108,18 @@ export function subtasks(items: Subtask[], problem?: string): string {
   );
 }
 
-export function time(entries: TimeEntry[], problem?: string): string {
+export function time(entries: LoggedEntry[], problem?: string): string {
   const rows = entries.map(
     (entry) =>
       `<li><span class="hours">${escapeHtml(formatMinutes(minutesOf(entry)))}</span><span class="grow">${escapeHtml(
-        entry.description ?? "",
-      )}</span>${entry.date ? chip(entry.date) : ""}</li>`,
+        entry.description || t.detail.noNote,
+      )}${
+        entry.targetTitle
+          ? `<span class="muted"> ${escapeHtml(t.detail.onSubtask(entry.targetTitle))}</span>`
+          : ""
+      }</span><span class="who-inline">${escapeHtml(entry.authorName ?? "")}</span>${
+        entry.status && entry.status !== "none" ? chip(t.detail.billable(entry.status)) : ""
+      }${entry.date ? chip(entry.date) : ""}</li>`,
   );
   return section(
     t.detail.time,

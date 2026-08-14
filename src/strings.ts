@@ -169,5 +169,8 @@ export const t = {
     back: "Voltar para a tarefa",
     subtaskOf: (title: string) => `subtarefa de ${title}`,
     logged: (hours: string) => `lançado ${hours}`,
+    noNote: "sem descrição",
+    onSubtask: (title: string) => `em ${title}`,
+    billable: (status: string) => (status === "billable" ? "faturável" : status),
   },
 };

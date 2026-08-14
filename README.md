@@ -32,8 +32,10 @@ Clicar numa tarefa abre o painel **ao lado do código**, não no navegador. Nele
 - ver subtarefas com o progresso `feitas/total`, marcar cada uma e criar novas;
 - **entrar na subtarefa** clicando no título dela: o painel abre a subtarefa como uma tarefa de verdade, com descrição, responsáveis, prazo, estimativa, horas e comentários próprios, e um botão para voltar;
 - ler a thread de comentários com autor e data, e responder ali mesmo, com `Cmd+Enter` para enviar;
-- ver as horas lançadas com o total somado, e lançar mais;
+- ver as horas lançadas com o total somado, quem lançou, a descrição, a data e a marca de faturável;
 - iniciar e parar o cronômetro.
+
+Na tarefa, a lista de horas inclui também o que foi lançado nas subtarefas dela, com o nome da subtarefa ao lado. Dentro de uma subtarefa, só o tempo dela. O casamento é feito por qualquer um dos campos que a API usa para apontar o destino do lançamento, porque um lançamento feito na subtarefa nem sempre chega com o mesmo campo preenchido.
 
 ### Cronômetros
 

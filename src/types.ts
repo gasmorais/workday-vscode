@@ -92,6 +92,10 @@ export interface TimeEntry {
   by_me?: boolean;
   creator?: Ref;
   task?: Ref | null;
+  subtask?: Ref | null;
+  task_id?: Id;
+  subtask_id?: Id;
+  list?: Ref;
   project?: Ref;
   timesheet?: Ref;
 }
@@ -111,6 +115,17 @@ export interface NewTimeEntry {
 export function personName(person: Person): string {
   const name = [person.first_name, person.last_name].filter(Boolean).join(" ").trim();
   return name || person.email || String(person.id);
+}
+
+export function entryTargets(entry: {
+  task?: { id: Id } | null;
+  subtask?: { id: Id } | null;
+  task_id?: Id;
+  subtask_id?: Id;
+}): Id[] {
+  return [entry.task?.id, entry.subtask?.id, entry.task_id, entry.subtask_id].filter(
+    (id): id is Id => id !== undefined && id !== null,
+  );
 }
 
 export function sameId(left: Id | undefined, right: Id | undefined): boolean {

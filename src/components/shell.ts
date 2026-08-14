@@ -34,6 +34,7 @@ form input[name=title], form input[name=description], form textarea { flex: 1; m
 .who { margin: 0 0 4px; font-weight: 600; font-size: .9em; display: flex; gap: 8px; align-items: baseline; }
 .hours { font-variant-numeric: tabular-nums; min-width: 52px; }
 .grow { flex: 1; }
+.who-inline { opacity: .8; font-size: .85em; white-space: nowrap; }
 .muted { opacity: .6; font-size: .85em; white-space: nowrap; }
 .prose { line-height: 1.55; overflow-wrap: anywhere; }
 .prose p { margin: 0 0 8px; }

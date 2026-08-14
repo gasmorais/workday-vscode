@@ -75,6 +75,34 @@ test("o tempo já lançado aparece como etiqueta no cabeçalho", () => {
   assert.ok(html.includes("lançado 3:20"));
 });
 
+test("o lançamento mostra quem foi, o que fez e em qual subtarefa", () => {
+  const html = renderBody({
+    ...base,
+    time: [
+      {
+        id: 80870831,
+        logged_hours: 0,
+        logged_mins: 20,
+        date: "2026-08-14",
+        status: "billable",
+        description: "Testando",
+        authorName: "Gabriel Morais",
+        targetTitle: "Entrada e Vigência da Loja",
+      },
+    ],
+  });
+  assert.ok(html.includes("Gabriel Morais"));
+  assert.ok(html.includes("Testando"));
+  assert.ok(html.includes("em Entrada e Vigência da Loja"));
+  assert.ok(html.includes("faturável"));
+  assert.ok(html.includes("0:20"));
+});
+
+test("lançamento sem descrição não vira linha vazia", () => {
+  const html = renderBody({ ...base, time: [{ id: 1, logged_mins: 30, description: null }] });
+  assert.ok(html.includes("sem descrição"));
+});
+
 test("seção que falhou explica o motivo em vez de fingir que está vazia", () => {
   const html = renderBody({ ...base, problems: { subtasks: "Erro 403 do ProofHub: sem acesso" } });
   assert.ok(html.includes("Não deu para carregar esta parte"));
