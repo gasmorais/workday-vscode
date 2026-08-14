@@ -6,6 +6,24 @@
   "publisher": "proofhub-vscode",
   "private": true,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gasmorais/proofhub-vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gasmorais/proofhub-vscode/issues"
+  },
+  "homepage": "https://github.com/gasmorais/proofhub-vscode#readme",
+  "keywords": [
+    "proofhub",
+    "project-management",
+    "tasks",
+    "time-tracking",
+    "timesheet",
+    "timer",
+    "productivity",
+    "sidebar"
+  ],
   "engines": {
     "vscode": "^1.90.0"
   },
