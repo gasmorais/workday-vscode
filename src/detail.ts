@@ -6,7 +6,15 @@ import { parseHours } from "./format.js";
 import { t } from "./locales/index.js";
 import { today } from "./time.js";
 import type { Node } from "./tree.js";
-import { entryTargets, personName, sameId, type Id, type Person, type Subtask } from "./types.js";
+import {
+  entryTargets,
+  personName,
+  sameId,
+  type Id,
+  type Person,
+  type Subtask,
+  type TimeEntry,
+} from "./types.js";
 import type { LoggedEntry } from "./components/sections.js";
 import { HOURS_PATTERN } from "./constants.js";
 
@@ -26,6 +34,7 @@ export interface DetailHost {
   timerRunsOn: (taskId: Id) => boolean;
   timerStartedAt: (taskId: Id) => number | undefined;
   openInBrowser: (node: Node) => Thenable<void>;
+  myName: () => Promise<string | undefined>;
 }
 
 async function settle<T>(promise: Promise<T>): Promise<{ value?: T; error?: string }> {
@@ -41,6 +50,9 @@ export class TaskDetail {
   private node: Node | undefined;
   private focused: Subtask | undefined;
   private people: Map<string, string> | undefined;
+  private view: TaskView | undefined;
+  private myName: string | undefined;
+  private loadToken = 0;
 
   constructor(private readonly host: DetailHost) {}
 
@@ -96,42 +108,87 @@ export class TaskDetail {
     };
   }
 
-  private async load(): Promise<void> {
+  private paint(view: TaskView): void {
+    if (!this.panel) {
+      return;
+    }
+    this.view = view;
+    this.panel.title = view.task.title;
+    this.panel.webview.html = page(renderBody(view));
+  }
+
+  private busy(on: boolean): void {
+    void this.panel?.webview.postMessage({ act: "busy", value: on });
+  }
+
+  private async load(options: { silent?: boolean } = {}): Promise<void> {
     const session = this.host.session();
     const node = this.node;
     if (!session || !this.panel || node?.kind !== "task") {
       return;
     }
-    this.panel.webview.html = page(`<p class="empty">${t.common.loading}</p>`);
+    const silent = options.silent && Boolean(this.view);
+    if (silent) {
+      this.busy(true);
+    } else {
+      this.view = undefined;
+      this.panel.webview.html = page(`<p class="empty">${t.common.loading}</p>`);
+    }
+    if (this.myName === undefined) {
+      void this.host.myName().then((name) => {
+        this.myName = name;
+      });
+    }
+    const ticket = (this.loadToken += 1);
     try {
       const view = this.focused
         ? await this.subtaskView(session, node, this.focused.id)
         : await this.taskView(session, node);
-      this.panel.title = view.task.title;
-      this.panel.webview.html = page(renderBody(view));
+      if (ticket !== this.loadToken) {
+        return;
+      }
+      this.paint(view);
     } catch (error) {
+      if (ticket !== this.loadToken) {
+        return;
+      }
+      this.view = undefined;
       this.panel.webview.html = page(
         `<p class="empty">${describeFailure(error)}</p><p class="actions"><button data-act="refresh">${t.common.tryAgain}</button></p>`,
       );
+    } finally {
+      if (ticket === this.loadToken) {
+        this.busy(false);
+      }
+    }
+  }
+
+  private patch(change: (view: TaskView) => TaskView): void {
+    if (this.view) {
+      this.paint(change(this.view));
     }
   }
 
   private async taskView(session: Session, node: Node & { kind: "task" }): Promise<TaskView> {
     const { client } = session;
     const { project, todolist, task } = node;
-    const subtasks = await settle(client.subtasks(project.id, todolist.id, task.id));
+    const [subtasks, fresh, comments, entries, names] = await Promise.all([
+      settle(client.subtasks(project.id, todolist.id, task.id)),
+      settle(client.task(project.id, todolist.id, task.id)),
+      settle(client.comments(project.id, todolist.id, task.id)),
+      settle(this.entriesOf(session, project.id)),
+      this.names(session),
+    ]);
     const targets = [
       { id: task.id, title: task.title },
       ...(subtasks.value ?? []).map((item) => ({ id: item.id, title: item.title })),
     ];
-    const [fresh, comments, time] = await Promise.all([
-      settle(client.task(project.id, todolist.id, task.id)),
-      settle(client.comments(project.id, todolist.id, task.id)),
-      settle(this.timeOf(session, project.id, targets)),
-    ]);
+    const time = {
+      value: this.match(entries.value ?? [], targets, names),
+      error: entries.error,
+    };
     this.node = { ...node, task: { ...task, ...(fresh.value ?? {}) } };
     const current = (this.node as Node & { kind: "task" }).task;
-    const names = await this.names(session);
     return {
       projectTitle: project.title,
       todolistTitle: todolist.title,
@@ -153,14 +210,18 @@ export class TaskDetail {
   ): Promise<TaskView> {
     const { client } = session;
     const { project, todolist, task } = node;
-    const [fresh, comments, time] = await Promise.all([
+    const [fresh, comments, entries, names] = await Promise.all([
       settle(client.subtask(project.id, todolist.id, task.id, subtaskId)),
       settle(client.subtaskComments(project.id, todolist.id, task.id, subtaskId)),
-      settle(this.timeOf(session, project.id, [{ id: subtaskId }])),
+      settle(this.entriesOf(session, project.id)),
+      this.names(session),
     ]);
+    const time = {
+      value: this.match(entries.value ?? [], [{ id: subtaskId }], names),
+      error: entries.error,
+    };
     const subtask = { ...this.focused, ...(fresh.value ?? {}) } as Subtask;
     this.focused = subtask;
-    const names = await this.names(session);
     return {
       projectTitle: project.title,
       todolistTitle: todolist.title,
@@ -199,32 +260,34 @@ export class TaskDetail {
     return this.people;
   }
 
-  private async timeOf(
-    session: Session,
-    projectId: Id,
-    wanted: { id: Id; title?: string }[],
-  ): Promise<LoggedEntry[]> {
+  private async entriesOf(session: Session, projectId: Id): Promise<TimeEntry[]> {
     const sheets = await session.client.timesheets(projectId).catch(() => []);
     const pages = await Promise.all(
       sheets.map((sheet) => session.client.timeEntries(projectId, sheet.id).catch(() => [])),
     );
-    const names = await this.names(session);
+    return pages.flat();
+  }
+
+  private match(
+    entries: TimeEntry[],
+    wanted: { id: Id; title?: string }[],
+    names: Map<string, string>,
+  ): LoggedEntry[] {
     const main = wanted[0]?.id;
-    return pages
-      .flat()
-      .map((entry) => {
+    return entries
+      .flatMap((entry) => {
         const targets = entryTargets(entry);
-        const match = wanted.find((item) => targets.some((id) => sameId(id, item.id)));
-        return match ? { entry, match } : undefined;
+        const found = wanted.find((item) => targets.some((id) => sameId(id, item.id)));
+        return found
+          ? [
+              {
+                ...entry,
+                authorName: names.get(String(entry.creator?.id)),
+                targetTitle: sameId(found.id, main) ? undefined : found.title,
+              },
+            ]
+          : [];
       })
-      .filter((row): row is { entry: LoggedEntry; match: { id: Id; title?: string } } =>
-        Boolean(row),
-      )
-      .map(({ entry, match }) => ({
-        ...entry,
-        authorName: names.get(String(entry.creator?.id)),
-        targetTitle: sameId(match.id, main) ? undefined : match.title,
-      }))
       .sort((left, right) => String(right.date ?? "").localeCompare(String(left.date ?? "")));
   }
 
@@ -261,32 +324,45 @@ export class TaskDetail {
           return;
         }
         case "startTimer":
+          this.patch((view) => ({ ...view, timerRunning: true, timerSince: Date.now() }));
           await this.host.startTimer(target);
           break;
         case "stopTimer":
+          this.patch((view) => ({ ...view, timerRunning: false, timerSince: undefined }));
           await this.host.stopTimer(target.taskId);
           break;
         case "complete":
         case "reopen": {
           const completed = message.act === "complete";
+          this.patch((view) => ({ ...view, task: { ...view.task, completed } }));
           await (onSubtask
             ? client.updateSubtask(project.id, todolist.id, task.id, target.taskId, { completed })
             : client.updateTask(project.id, todolist.id, task.id, { completed }));
           break;
         }
-        case "toggleSubtask":
+        case "toggleSubtask": {
           if (!message.id) {
             return;
           }
-          await client.updateSubtask(project.id, todolist.id, task.id, message.id, {
-            completed: Boolean(message.value),
-          });
+          const completed = Boolean(message.value);
+          this.patch((view) => ({
+            ...view,
+            subtasks: view.subtasks.map((item) =>
+              sameId(item.id, message.id) ? { ...item, completed } : item,
+            ),
+          }));
+          await client.updateSubtask(project.id, todolist.id, task.id, message.id, { completed });
           break;
+        }
         case "subtask": {
           const title = fields.title?.trim();
           if (!title) {
             return;
           }
+          this.patch((view) => ({
+            ...view,
+            subtasks: [...view.subtasks, { id: `pending-${view.subtasks.length}`, title }],
+          }));
           await client.createSubtask(project.id, todolist.id, task.id, { title });
           break;
         }
@@ -295,6 +371,18 @@ export class TaskDetail {
           if (!content) {
             return;
           }
+          this.patch((view) => ({
+            ...view,
+            comments: [
+              ...view.comments,
+              {
+                id: `pending-${view.comments.length}`,
+                description: content,
+                created_at: new Date().toISOString(),
+                authorName: this.myName,
+              },
+            ],
+          }));
           await (onSubtask
             ? client.addSubtaskComment(project.id, todolist.id, task.id, target.taskId, content)
             : client.addComment(project.id, todolist.id, task.id, content));
@@ -312,6 +400,20 @@ export class TaskDetail {
             return;
           }
           const minutes = parseHours(hours);
+          this.patch((view) => ({
+            ...view,
+            time: [
+              {
+                id: `pending-${view.time.length}`,
+                logged_hours: Math.floor(minutes / 60),
+                logged_mins: minutes % 60,
+                date: today(),
+                description: fields.description?.trim() ?? "",
+                authorName: this.myName,
+              },
+              ...view.time,
+            ],
+          }));
           await client.logTime({
             project: project.id,
             timesheet_id: sheets[0].id,
@@ -327,11 +429,13 @@ export class TaskDetail {
         default:
           return;
       }
-      this.host.onChanged(node);
-      await this.load();
+      await this.load({ silent: true });
+      if (this.node?.kind === "task") {
+        this.host.onChanged(this.node);
+      }
     } catch (error) {
       vscode.window.showErrorMessage(describeFailure(error));
-      await this.load();
+      await this.load({ silent: true });
     }
   }
 }

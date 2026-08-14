@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import type { Session } from "./auth.js";
 import { describeFailure } from "./auth.js";
 import type { Person, Project, Task, Todolist } from "./types.js";
-import { personName } from "./types.js";
+import { personName, sameId } from "./types.js";
 import { applyFilter, EMPTY_FILTER, sortTasks, type SortKey, type TaskFilter } from "./filter.js";
 import { firstLine } from "./html.js";
 import { formatMinutes, toDate } from "./format.js";
@@ -62,6 +62,18 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
     }
     this.inFlight.clear();
     this.changed.fire(node);
+  }
+
+  patchTask(node: Node & { kind: "task" }): void {
+    const key = cacheKey({ kind: "todolist", project: node.project, todolist: node.todolist });
+    const hit = this.cache.get(key);
+    if (!hit) {
+      return;
+    }
+    hit.nodes = hit.nodes.map((child) =>
+      child.kind === "task" && sameId(child.task.id, node.task.id) ? node : child,
+    );
+    this.redraw();
   }
 
   private redraw(): void {

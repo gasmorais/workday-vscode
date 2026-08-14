@@ -10,6 +10,9 @@ export function page(body: string): string {
 }
 
 const STYLE = `
+body::before { content: ""; position: fixed; inset: 0 0 auto 0; height: 2px; background: var(--vscode-progressBar-background, var(--vscode-button-background)); transform: scaleX(0); transform-origin: left; transition: transform .25s ease; z-index: 10; }
+body.busy::before { animation: sweep 1.1s ease-in-out infinite; }
+@keyframes sweep { 0% { transform: scaleX(0); transform-origin: left; } 50% { transform: scaleX(1); transform-origin: left; } 51% { transform: scaleX(1); transform-origin: right; } 100% { transform: scaleX(0); transform-origin: right; } }
 body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); padding: 0 16px 40px; }
 h1 { font-size: 1.35em; margin: 10px 0 8px; line-height: 1.3; }
 h1.done { text-decoration: line-through; opacity: .6; }
@@ -107,6 +110,20 @@ form input[name=title], form input[name=description], form textarea { flex: 1; m
 
 const SCRIPT = `
 const vs = acquireVsCodeApi();
+const saved = vs.getState();
+if (saved && saved.scroll) { window.scrollTo(0, saved.scroll); }
+let ticking = false;
+window.addEventListener('scroll', () => {
+  if (ticking) { return; }
+  ticking = true;
+  requestAnimationFrame(() => {
+    ticking = false;
+    vs.setState({ scroll: window.scrollY });
+  });
+});
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.act === 'busy') { document.body.classList.toggle('busy', Boolean(e.data.value)); }
+});
 document.addEventListener('click', (e) => {
   const target = e.target.closest('button[data-act]');
   if (!target) { return; }

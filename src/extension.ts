@@ -4,7 +4,7 @@ import { ProjectsProvider, type Node } from "./tree.js";
 import { Timer } from "./timer.js";
 import { formatDuration, today } from "./time.js";
 import { parseHours } from "./format.js";
-import { sameId, type Id } from "./types.js";
+import { personName, sameId, type Id } from "./types.js";
 import { resolveMe } from "./me.js";
 import { parseAppUrl } from "./urls.js";
 import { t, useLocale } from "./locales/index.js";
@@ -26,12 +26,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const detail = new TaskDetail({
     session: () => session,
-    onChanged: (node) => provider.refresh(provider.getParent(node)),
+    onChanged: (node) => {
+      if (node.kind === "task") {
+        provider.patchTask(node);
+      } else {
+        provider.refresh(provider.getParent(node));
+      }
+    },
     timerRunsOn: (taskId) => Boolean(timer.on(taskId)),
     timerStartedAt: (taskId) => timer.on(taskId)?.startedAt,
     startTimer: (target) => startTimerOn(target),
     stopTimer: (taskId) => stopTimerOn(taskId),
     openInBrowser: (node) => vscode.commands.executeCommand("proofhub.openInBrowser", node),
+    myName: async () => {
+      const person = session ? await resolveMe(context, session.client, { ask: false }) : undefined;
+      return person ? personName(person) : undefined;
+    },
   });
 
   const whoAmI = async () =>
