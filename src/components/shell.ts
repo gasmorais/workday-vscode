@@ -26,8 +26,29 @@ h2 { display: flex; align-items: center; font-size: .8em; text-transform: upperc
 .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 10px 0 0; }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0 0; }
 header { padding-bottom: 4px; }
-button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 4px 12px; border-radius: 2px; cursor: pointer; font-family: inherit; font-size: inherit; }
+button { display: inline-flex; align-items: center; justify-content: center; min-height: 26px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: 1px solid transparent; padding: 0 12px; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: inherit; line-height: 1; white-space: nowrap; }
 button:hover { background: var(--vscode-button-hoverBackground); }
+button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px; }
+button.ghost { background: var(--vscode-button-secondaryBackground, transparent); color: var(--vscode-button-secondaryForeground, var(--vscode-foreground)); border-color: var(--vscode-panel-border); }
+button.ghost:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground)); }
+button.timer { font-weight: 600; padding: 0 14px; }
+button.timer::before { content: ""; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: currentColor; opacity: .85; }
+button.timer.running { background: var(--vscode-charts-red, #d9534f); color: #fff; }
+button.timer.running::before { border-radius: 1px; animation: pulse 1.6s ease-in-out infinite; }
+button.timer.running:hover { background: var(--vscode-charts-red, #d9534f); filter: brightness(1.12); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+.alerts { display: flex; flex-direction: column; gap: 8px; margin: 16px 0 4px; }
+.alert { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-radius: 5px; border: 1px solid var(--vscode-panel-border); border-left-width: 3px; background: var(--vscode-editorWidget-background); }
+.alert-body { flex: 1; min-width: 190px; }
+.alert-title { margin: 0; font-weight: 600; font-size: .92em; }
+.alert-text { margin: 3px 0 0; font-size: .88em; line-height: 1.45; color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
+.alert-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.alert.danger { border-left-color: var(--vscode-charts-red, #d9534f); background: var(--vscode-inputValidation-errorBackground, var(--vscode-editorWidget-background)); }
+.alert.danger .alert-title { color: var(--vscode-charts-red, #d9534f); }
+.alert.warn { border-left-color: var(--vscode-charts-orange, #e08c3b); }
+.alert.warn .alert-title { color: var(--vscode-charts-orange, #e08c3b); }
+.alert.info { border-left-color: var(--vscode-charts-blue, #4a8cff); }
+form.focused input, form.focused textarea { outline: 1px solid var(--vscode-focusBorder); }
 input, textarea, select { background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, transparent); padding: 4px 6px; border-radius: 2px; font-family: inherit; font-size: inherit; }
 form { display: flex; gap: 6px; margin-top: 10px; align-items: flex-start; flex-wrap: wrap; }
 form input[name=title], form input[name=description], form textarea { flex: 1; min-width: 140px; }
@@ -88,7 +109,19 @@ const SCRIPT = `
 const vs = acquireVsCodeApi();
 document.addEventListener('click', (e) => {
   const target = e.target.closest('button[data-act]');
-  if (target) { vs.postMessage({ act: target.dataset.act, id: target.dataset.id }); }
+  if (!target) { return; }
+  if (target.dataset.act === 'focusTime') {
+    const form = document.querySelector('form[data-form=time]');
+    if (form) {
+      form.scrollIntoView({ block: 'center' });
+      form.classList.add('focused');
+      setTimeout(() => form.classList.remove('focused'), 1400);
+      const field = form.querySelector('input[name=description]');
+      if (field) { field.focus(); }
+    }
+    return;
+  }
+  vs.postMessage({ act: target.dataset.act, id: target.dataset.id });
 });
 document.addEventListener('change', (e) => {
   const box = e.target.closest('input[data-subtask]');

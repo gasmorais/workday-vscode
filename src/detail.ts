@@ -23,6 +23,7 @@ export interface DetailHost {
   startTimer: (target: TimerTarget) => Promise<void>;
   stopTimer: (taskId: Id) => Promise<void>;
   timerRunsOn: (taskId: Id) => boolean;
+  timerStartedAt: (taskId: Id) => number | undefined;
   openInBrowser: (node: Node) => Thenable<void>;
 }
 
@@ -139,6 +140,7 @@ export class TaskDetail {
       comments: this.withAuthors(comments.value ?? [], names),
       time: time.value ?? [],
       timerRunning: this.host.timerRunsOn(current.id),
+      timerSince: this.host.timerStartedAt(current.id),
       problems: { subtasks: subtasks.error, comments: comments.error, time: time.error },
     };
   }
@@ -169,6 +171,7 @@ export class TaskDetail {
       comments: this.withAuthors(comments.value ?? [], names),
       time: time.value ?? [],
       timerRunning: this.host.timerRunsOn(subtask.id),
+      timerSince: this.host.timerStartedAt(subtask.id),
       problems: { comments: comments.error, time: time.error },
     };
   }

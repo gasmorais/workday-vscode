@@ -3,6 +3,7 @@ import { t } from "../strings.js";
 import { estimateOf as estimateMinutes, minutesOf, type Comment, type Subtask, type Task, type TimeEntry } from "../types.js";
 import { daysUntil, formatMinutes, formatWhen, shortDate } from "../format.js";
 import { button, chip, empty, field, form, linkButton, list, section } from "./ui.js";
+import { alerts } from "./alerts.js";
 
 export type LoggedEntry = TimeEntry & { authorName?: string; targetTitle?: string };
 
@@ -15,6 +16,7 @@ export interface TaskView {
   comments: (Comment & { authorName?: string })[];
   time: LoggedEntry[];
   timerRunning: boolean;
+  timerSince?: number;
   isSubtask?: boolean;
   parentTitle?: string;
   problems?: { subtasks?: string; comments?: string; time?: string };
@@ -23,16 +25,20 @@ export interface TaskView {
 export function header(view: TaskView): string {
   const done = Boolean(view.task.completed);
   const actions = [
-    button(done ? "reopen" : "complete", done ? t.detail.reopen : t.detail.complete),
     button(
       view.timerRunning ? "stopTimer" : "startTimer",
       view.timerRunning ? t.detail.stopTimer : t.detail.startTimer,
+      { variant: view.timerRunning ? "timer running" : "timer", title: t.detail.timerHint },
     ),
-    button("open", t.detail.openBrowser),
-    button("refresh", t.detail.refresh),
+    button("focusTime", t.alerts.logNow, { variant: "ghost" }),
+    button(done ? "reopen" : "complete", done ? t.detail.reopen : t.detail.complete, {
+      variant: "ghost",
+    }),
+    button("open", t.detail.openBrowser, { variant: "ghost" }),
+    button("refresh", t.detail.refresh, { variant: "ghost" }),
   ];
   if (view.isSubtask) {
-    actions.unshift(button("back", t.detail.back));
+    actions.unshift(button("back", t.detail.back, { variant: "ghost" }));
   }
   const crumbs = [view.projectTitle, view.todolistTitle, view.parentTitle]
     .filter(Boolean)
@@ -190,6 +196,7 @@ export function comments(items: (Comment & { authorName?: string })[], problem?:
 export function renderBody(view: TaskView): string {
   return [
     header(view),
+    alerts(view),
     description(view.task),
     view.isSubtask ? "" : subtasks(view.subtasks, view.problems?.subtasks),
     time(view.time, view.problems?.time),

@@ -141,6 +141,40 @@ export const t = {
     onlyMine: "Somente minhas horas",
     everyone: "Horas de toda a equipe",
   },
+  alerts: {
+    thisTask: "esta tarefa",
+    thisSubtask: "esta subtarefa",
+    logNow: "Lançar horas agora",
+    runningTitle: "Cronômetro em andamento",
+    runningText: (elapsed: string) => `Contando ${elapsed} até agora. Ao parar, o tempo é lançado no ProofHub.`,
+    runningLong: (elapsed: string) =>
+      `Já são ${elapsed} de cronômetro. Confira se você esqueceu de parar em algum momento.`,
+    overdueTitle: "Prazo estourado",
+    overdueText: (kind: string, days: number, date: string) =>
+      days === 1
+        ? `O prazo de ${kind} era ontem, ${date}. Conclua ou negocie uma nova data.`
+        : `O prazo de ${kind} venceu há ${days} dias, em ${date}. Conclua ou negocie uma nova data.`,
+    todayTitle: "Vence hoje",
+    todayText: (kind: string) => `O prazo de ${kind} termina hoje. Ainda dá tempo de fechar.`,
+    tomorrowTitle: "Vence amanhã",
+    tomorrowText: (kind: string, date: string) => `O prazo de ${kind} é ${date}, amanhã.`,
+    noTimeTitle: "Nenhuma hora atribuída",
+    noTimeText: (kind: string) =>
+      `Ainda não existe hora lançada em ${kind}. Inicie o cronômetro ou registre o tempo manualmente.`,
+    noTimeDone: (kind: string) =>
+      `A entrega de ${kind} foi concluída sem nenhuma hora lançada. Registre o esforço antes de fechar o mês.`,
+    overEstimateTitle: "Estimativa estourada",
+    overEstimateText: (estimate: string, over: string) =>
+      `A estimativa era de ${estimate} e o lançado já passou dela em ${over}.`,
+    nearEstimateTitle: "Perto do limite estimado",
+    nearEstimateText: (estimate: string, percent: number) =>
+      `Você já usou ${percent}% da estimativa de ${estimate}.`,
+    noEstimateTitle: "Sem estimativa",
+    noEstimateText: (kind: string, logged: string) =>
+      `Há ${logged} lançados em ${kind}, mas nenhuma estimativa para comparar.`,
+    noOwnerTitle: "Sem responsável",
+    noOwnerText: (kind: string) => `Ninguém está atribuído a ${kind}, então ela não aparece na fila de nenhuma pessoa.`,
+  },
   detail: {
     status: { open: "em aberto", done: "concluída" },
     due: (date: string) => `prazo ${date}`,
@@ -156,6 +190,7 @@ export const t = {
     reopen: "Reabrir",
     startTimer: "Iniciar cronômetro",
     stopTimer: "Parar cronômetro",
+    timerHint: "O tempo é lançado no ProofHub quando você parar",
     openBrowser: "Abrir no ProofHub",
     refresh: "Atualizar",
     description: "Descrição",

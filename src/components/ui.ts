@@ -19,15 +19,23 @@ export function chip(text: string, tone: Tone = "neutral", title?: string): stri
   return `<span class="chip ${tone}"${hint}>${escapeHtml(text)}</span>`;
 }
 
-export function button(action: string, label: string, id?: string | number): string {
-  const target = id === undefined ? "" : ` data-id="${escapeHtml(id)}"`;
-  return `<button data-act="${escapeHtml(action)}"${target}>${escapeHtml(label)}</button>`;
+export type Variant = "primary" | "ghost" | "timer" | "timer running" | "as-link";
+
+export function button(
+  action: string,
+  label: string,
+  options: { id?: string | number; variant?: Variant; title?: string } = {},
+): string {
+  const target = options.id === undefined ? "" : ` data-id="${escapeHtml(options.id)}"`;
+  const variant = options.variant ? ` class="${options.variant}"` : "";
+  const hint = options.title ? ` title="${escapeHtml(options.title)}"` : "";
+  return `<button${variant} data-act="${escapeHtml(action)}"${target}${hint}>${escapeHtml(
+    label,
+  )}</button>`;
 }
 
 export function linkButton(action: string, label: string, id: string | number): string {
-  return `<button class="as-link" data-act="${escapeHtml(action)}" data-id="${escapeHtml(
-    id,
-  )}">${escapeHtml(label)}</button>`;
+  return button(action, label, { id, variant: "as-link" });
 }
 
 export function list(className: string, items: string[]): string {

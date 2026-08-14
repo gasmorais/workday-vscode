@@ -26,6 +26,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     session: () => session,
     onChanged: (node) => provider.refresh(provider.getParent(node)),
     timerRunsOn: (taskId) => Boolean(timer.on(taskId)),
+    timerStartedAt: (taskId) => timer.on(taskId)?.startedAt,
     startTimer: (target) => startTimerOn(target),
     stopTimer: (taskId) => stopTimerOn(taskId),
     openInBrowser: (node) => vscode.commands.executeCommand("proofhub.openInBrowser", node),
