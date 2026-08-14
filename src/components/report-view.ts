@@ -1,4 +1,5 @@
-import { monthLabel } from "../format.js";
+import { formatMinutes, monthLabel } from "../format.js";
+import { minutesOf } from "../types.js";
 import { escapeHtml } from "../html.js";
 import type { Bucket, Report } from "../report.js";
 import { t } from "../strings.js";
@@ -79,10 +80,10 @@ function entries(report: Report): string {
   }
   const rows = report.entries.slice(0, 60).map(
     (entry) =>
-      `<li><span class="hours">${escapeHtml(entry.hours ?? "")}</span><span class="grow">${escapeHtml(
+      `<li><span class="hours">${escapeHtml(formatMinutes(minutesOf(entry)))}</span><span class="grow">${escapeHtml(
         entry.description ?? "",
       )}</span><span class="muted">${escapeHtml(entry.projectTitle ?? "")}</span><span class="muted">${escapeHtml(
-        dayLabel(entry.logged_date ?? ""),
+        dayLabel(entry.date ?? ""),
       )}</span></li>`,
   );
   return section(t.report.entries, String(report.entries.length), list("entries", rows));

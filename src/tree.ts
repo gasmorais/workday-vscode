@@ -148,9 +148,6 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
       }
       if (node.kind === "todolist") {
         await this.loadNames();
-        if (this.filter.mine && !this.filter.meId) {
-          this.filter.meId = String((await client.me().catch(() => undefined))?.id ?? "");
-        }
         const all = await client.tasks(node.project.id, node.todolist.id);
         const tasks = sortTasks(applyFilter(all, this.filter), this.sort);
         const children: Node[] = tasks.map((task) => ({

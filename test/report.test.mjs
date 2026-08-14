@@ -5,10 +5,10 @@ import { monthLabel, weekKey } from "../out/format.js";
 
 const hoje = new Date("2026-08-14T09:00:00Z");
 const lancamentos = [
-  { id: "1", hours: "2:30", logged_date: "2026-08-14", projectTitle: "Corteva" },
-  { id: "2", hours: "1:45", logged_date: "2026-08-14", projectTitle: "Produtos" },
-  { id: "3", hours: "8:00", logged_date: "2026-08-11", projectTitle: "Corteva" },
-  { id: "4", hours: "4:00", logged_date: "2026-07-30", projectTitle: "Produtos" },
+  { id: 1, logged_hours: 2, logged_mins: 30, date: "2026-08-14", projectTitle: "Corteva" },
+  { id: 2, logged_hours: 1, logged_mins: 45, date: "2026-08-14", projectTitle: "Produtos" },
+  { id: 3, logged_hours: 8, logged_mins: null, date: "2026-08-11", projectTitle: "Corteva" },
+  { id: 4, logged_hours: null, logged_mins: 240, date: "2026-07-30", projectTitle: "Produtos" },
 ];
 
 test("hoje, semana e mês somam faixas diferentes do mesmo conjunto", () => {
@@ -45,7 +45,12 @@ test("o tempo estimado em aberto vem de fora e é formatado igual", () => {
   assert.deepEqual(relatorio.days, []);
 });
 
+test("o tempo vem em horas e minutos separados, e minuto sozinho também conta", () => {
+  const relatorio = buildReport(lancamentos, { reference: hoje });
+  assert.equal(relatorio.months.find((mes) => mes.key === "2026-07").hours, "4:00");
+});
+
 test("os lançamentos saem do mais recente para o mais antigo", () => {
   const relatorio = buildReport(lancamentos, { reference: hoje });
-  assert.deepEqual(relatorio.entries.map((entrada) => entrada.id), ["1", "2", "3", "4"]);
+  assert.deepEqual(relatorio.entries.map((entrada) => entrada.id), [1, 2, 3, 4]);
 });

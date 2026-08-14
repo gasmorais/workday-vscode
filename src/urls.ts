@@ -1,14 +1,16 @@
+import type { Id } from "./types.js";
+
 export const APP_PREFIX = "bapplite/#app";
 
-export function bareId(id: string, prefix: string): string {
+export function bareId(id: Id, prefix: string): string {
   const value = String(id).trim();
   return value.startsWith(`${prefix}-`) ? value.slice(prefix.length + 1) : value;
 }
 
 export interface Location {
-  projectId: string;
-  todolistId?: string;
-  taskId?: string;
+  projectId: Id;
+  todolistId?: Id;
+  taskId?: Id;
 }
 
 export function appPath(location: Location): string {

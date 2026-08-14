@@ -1,66 +1,132 @@
+export type Id = string | number;
+
+export interface Ref {
+  id: Id;
+  name?: string;
+  title?: string;
+}
+
 export interface Person {
-  id: string;
-  email?: string;
+  id: Id;
   first_name?: string;
   last_name?: string;
-  role?: string;
+  email?: string;
+  title?: string;
+  initials?: string;
+  suspended?: boolean;
 }
 
 export interface Project {
-  id: string;
+  id: Id;
   title: string;
   description?: string;
   archived?: boolean;
-  url?: string;
+  color?: string;
+  assigned?: Id[];
 }
 
 export interface Todolist {
-  id: string;
+  id: Id;
   title: string;
-  project_id?: string;
+  archived?: boolean;
+  completed_count?: number;
+  remaining_count?: number;
 }
 
 export interface Task {
-  id: string;
+  id: Id;
   title: string;
   description?: string;
   completed?: boolean;
-  assigned?: string[];
-  due_date?: string;
-  start_date?: string;
-  estimated_hours?: number;
-  estimated_mins?: number;
-  labels?: string[];
+  assigned?: Id[];
+  labels?: Id[];
+  due_date?: string | null;
+  start_date?: string | null;
+  estimated_hours?: number | null;
+  estimated_mins?: number | null;
+  logged_hours?: number | null;
+  logged_mins?: number | null;
+  percent_progress?: number;
   sub_tasks?: number;
+  comments?: number;
+  ticket?: string;
+  by_me?: boolean;
+  creator?: Ref;
+  project?: Ref;
+  list?: Ref;
+  stage?: Ref;
   url?: string;
 }
 
-export interface Subtask {
-  id: string;
-  title: string;
-  completed?: boolean;
-  assigned?: string[];
-  due_date?: string;
-}
+export type Subtask = Task;
 
 export interface Comment {
-  id: string;
-  content: string;
-  created_by?: string;
+  id: Id;
+  description?: string;
   created_at?: string;
+  by_me?: boolean;
+  creator?: Ref;
+  task?: Ref;
+}
+
+export interface Timesheet {
+  id: Id;
+  title: string;
+  archived?: boolean;
+  private?: boolean;
+  logged_hours?: number | null;
+  logged_mins?: number | null;
+  estimated_hours?: number | null;
+  estimated_mins?: number | null;
 }
 
 export interface TimeEntry {
-  id: string;
-  hours?: string;
+  id: Id;
+  description?: string | null;
+  date?: string;
+  created_at?: string;
+  logged_hours?: number | null;
+  logged_mins?: number | null;
+  status?: string;
+  timer?: boolean;
+  by_me?: boolean;
+  creator?: Ref;
+  task?: Ref | null;
+  project?: Ref;
+  timesheet?: Ref;
+}
+
+export interface NewTimeEntry {
+  project: Id;
+  timesheet_id: Id;
+  date: string;
+  logged_hours: string;
+  logged_mins: string;
   description?: string;
-  logged_date?: string;
-  billable?: boolean;
-  task_id?: string;
-  created_by?: string;
+  status?: string;
+  list_id?: Id;
+  task_id?: Id;
 }
 
 export function personName(person: Person): string {
   const name = [person.first_name, person.last_name].filter(Boolean).join(" ").trim();
-  return name || person.email || person.id;
+  return name || person.email || String(person.id);
+}
+
+export function sameId(left: Id | undefined, right: Id | undefined): boolean {
+  return left !== undefined && right !== undefined && String(left) === String(right);
+}
+
+export function minutesOf(item: {
+  logged_hours?: number | null;
+  logged_mins?: number | null;
+}): number {
+  return (item.logged_hours ?? 0) * 60 + (item.logged_mins ?? 0);
+}
+
+export function estimateOf(item: {
+  estimated_hours?: number | null;
+  estimated_mins?: number | null;
+}): number {
+  return (item.estimated_hours ?? 0) * 60 + (item.estimated_mins ?? 0);
 }

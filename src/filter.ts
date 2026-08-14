@@ -1,6 +1,6 @@
 import { plainText } from "./html.js";
 import { toDate } from "./format.js";
-import type { Task } from "./types.js";
+import { sameId, type Id, type Task } from "./types.js";
 
 export type SortKey = "list" | "due" | "title" | "assigned";
 
@@ -9,7 +9,7 @@ export interface TaskFilter {
   mine: boolean;
   hideCompleted: boolean;
   overdueOnly: boolean;
-  meId?: string;
+  meId?: Id;
 }
 
 export const EMPTY_FILTER: TaskFilter = {
@@ -28,8 +28,8 @@ export function matches(task: Task, filter: TaskFilter, reference = new Date()):
     return false;
   }
   if (filter.mine) {
-    const mine = (task.assigned ?? []).map(String);
-    if (!filter.meId || !mine.includes(String(filter.meId))) {
+    const mine = task.assigned ?? [];
+    if (!filter.meId || !mine.some((id) => sameId(id, filter.meId))) {
       return false;
     }
   }

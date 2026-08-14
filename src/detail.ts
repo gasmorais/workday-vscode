@@ -3,16 +3,25 @@ import { describeFailure, type Session } from "./auth.js";
 import { renderBody, type TaskView } from "./components/sections.js";
 import { t } from "./strings.js";
 import { page } from "./components/shell.js";
+
+async function settle<T>(promise: Promise<T>): Promise<{ value?: T; error?: string }> {
+  try {
+    return { value: await promise };
+  } catch (error) {
+    return { error: describeFailure(error) };
+  }
+}
 import type { Node } from "./tree.js";
-import { personName, type Person, type TimeEntry } from "./types.js";
+import { personName, sameId, type Id, type Person, type TimeEntry } from "./types.js";
 import { today } from "./time.js";
+import { parseHours } from "./format.js";
 
 export interface DetailHost {
   session: () => Session | undefined;
   onChanged: (node: Node) => void;
   startTimer: (node: Node) => Thenable<void>;
   stopTimer: () => Thenable<void>;
-  timerRunsOn: (taskId: string) => boolean;
+  timerRunsOn: (taskId: Id) => boolean;
   openInBrowser: (node: Node) => Thenable<void>;
 }
 
@@ -46,12 +55,12 @@ export class TaskDetail {
     await this.load();
   }
 
-  get taskId(): string | undefined {
+  get taskId(): Id | undefined {
     return this.node?.kind === "task" ? this.node.task.id : undefined;
   }
 
-  refreshIfShowing(taskId: string): void {
-    if (this.node?.kind === "task" && this.node.task.id === taskId) {
+  refreshIfShowing(taskId: Id): void {
+    if (this.node?.kind === "task" && sameId(this.node.task.id, taskId)) {
       void this.load();
     }
   }
@@ -68,25 +77,30 @@ export class TaskDetail {
 
     try {
       const [fresh, subtasks, comments, time] = await Promise.all([
-        client.task(project.id, todolist.id, task.id).catch(() => task),
-        client.subtasks(project.id, todolist.id, task.id).catch(() => []),
-        client.comments(project.id, todolist.id, task.id).catch(() => []),
-        this.taskTime(session, project.id, task.id),
+        settle(client.task(project.id, todolist.id, task.id)),
+        settle(client.subtasks(project.id, todolist.id, task.id)),
+        settle(client.comments(project.id, todolist.id, task.id)),
+        settle(this.taskTime(session, project.id, task.id)),
       ]);
-      this.node = { ...node, task: { ...task, ...fresh } };
+      this.node = { ...node, task: { ...task, ...(fresh.value ?? {}) } };
       const names = await this.names(session);
       const view: TaskView = {
         projectTitle: project.title,
         todolistTitle: todolist.title,
         task: this.node.task,
         assignees: (this.node.task.assigned ?? []).map((id) => names.get(String(id)) ?? String(id)),
-        subtasks,
-        comments: comments.map((comment) => ({
+        subtasks: subtasks.value ?? [],
+        comments: (comments.value ?? []).map((comment) => ({
           ...comment,
-          authorName: names.get(String(comment.created_by)) ?? comment.created_by,
+          authorName: names.get(String(comment.creator?.id)),
         })),
-        time,
+        time: time.value ?? [],
         timerRunning: this.host.timerRunsOn(task.id),
+        problems: {
+          subtasks: subtasks.error,
+          comments: comments.error,
+          time: time.error,
+        },
       };
       this.panel.webview.html = this.shell(renderBody(view));
     } catch (error) {
@@ -104,18 +118,12 @@ export class TaskDetail {
     return this.people;
   }
 
-  private async taskTime(
-    session: Session,
-    projectId: string,
-    taskId: string,
-  ): Promise<TimeEntry[]> {
+  private async taskTime(session: Session, projectId: Id, taskId: Id): Promise<TimeEntry[]> {
     const sheets = await session.client.timesheets(projectId).catch(() => []);
     const pages = await Promise.all(
       sheets.map((sheet) => session.client.timeEntries(projectId, sheet.id).catch(() => [])),
     );
-    return pages
-      .flat()
-      .filter((entry) => !entry.task_id || String(entry.task_id) === String(taskId));
+    return pages.flat().filter((entry) => sameId(entry.task?.id, taskId));
   }
 
   private async handle(message: { act?: string; id?: string; value?: unknown }): Promise<void> {
@@ -180,10 +188,15 @@ export class TaskDetail {
             vscode.window.showWarningMessage(t.time.noTimesheet);
             return;
           }
-          await client.logTime(project.id, sheets[0].id, {
-            hours,
+          const minutes = parseHours(hours);
+          await client.logTime({
+            project: project.id,
+            timesheet_id: sheets[0].id,
+            date: today(),
+            logged_hours: String(Math.floor(minutes / 60)),
+            logged_mins: String(minutes % 60),
             description: fields.description?.trim() ?? "",
-            logged_date: today(),
+            list_id: todolist.id,
             task_id: task.id,
           });
           break;

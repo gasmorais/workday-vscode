@@ -5,12 +5,16 @@ import { renderReport } from "./components/report-view.js";
 import { parseHours } from "./format.js";
 import { buildReport, type Logged } from "./report.js";
 import { t } from "./strings.js";
+import { estimateOf, sameId, type Person } from "./types.js";
 
 export class ReportPanel {
   private panel: vscode.WebviewPanel | undefined;
   private onlyMine = true;
 
-  constructor(private readonly session: () => Session | undefined) {}
+  constructor(
+    private readonly session: () => Session | undefined,
+    private readonly whoAmI: () => Promise<Person | undefined>,
+  ) {}
 
   async show(): Promise<void> {
     if (!this.panel) {
@@ -72,7 +76,7 @@ export class ReportPanel {
       },
       async (progress, token) => {
         const { client } = session;
-        const me = await client.me();
+        const me = await this.whoAmI();
         const projects = await client.projects(false);
         const entries: Logged[] = [];
         let estimated = 0;
@@ -88,7 +92,7 @@ export class ReportPanel {
 
           for (const sheet of await client.timesheets(project.id).catch(() => [])) {
             for (const entry of await client.timeEntries(project.id, sheet.id).catch(() => [])) {
-              const mine = !entry.created_by || String(entry.created_by) === String(me.id);
+              const mine = me ? sameId(entry.creator?.id, me.id) : Boolean(entry.by_me);
               if (this.onlyMine && !mine) {
                 continue;
               }
@@ -101,11 +105,11 @@ export class ReportPanel {
               break;
             }
             for (const task of await client.tasks(project.id, todolist.id).catch(() => [])) {
-              const mine = (task.assigned ?? []).map(String).includes(String(me.id));
+              const mine = me ? (task.assigned ?? []).some((id) => sameId(id, me.id)) : Boolean(task.by_me);
               if (task.completed || (this.onlyMine && !mine)) {
                 continue;
               }
-              estimated += (task.estimated_hours ?? 0) * 60 + (task.estimated_mins ?? 0);
+              estimated += estimateOf(task);
             }
           }
         }

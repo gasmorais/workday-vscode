@@ -1,7 +1,7 @@
 import { escapeHtml, richText } from "../html.js";
 import { t } from "../strings.js";
-import type { Comment, Subtask, Task, TimeEntry } from "../types.js";
-import { formatWhen, sumHours } from "../format.js";
+import { estimateOf as estimateMinutes, minutesOf, type Comment, type Subtask, type Task, type TimeEntry } from "../types.js";
+import { formatMinutes, formatWhen } from "../format.js";
 import { button, chip, empty, field, form, list, section } from "./ui.js";
 
 export interface TaskView {
@@ -13,6 +13,7 @@ export interface TaskView {
   comments: (Comment & { authorName?: string })[];
   time: TimeEntry[];
   timerRunning: boolean;
+  problems?: { subtasks?: string; comments?: string; time?: string };
 }
 
 export function header(view: TaskView): string {
@@ -53,8 +54,8 @@ function chips(view: TaskView): string {
 }
 
 function estimateOf(task: Task): string {
-  const minutes = (task.estimated_hours ?? 0) * 60 + (task.estimated_mins ?? 0);
-  return minutes > 0 ? `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}` : "";
+  const minutes = estimateMinutes(task);
+  return minutes > 0 ? formatMinutes(minutes) : "";
 }
 
 export function description(task: Task): string {
@@ -66,7 +67,7 @@ export function description(task: Task): string {
   );
 }
 
-export function subtasks(items: Subtask[]): string {
+export function subtasks(items: Subtask[], problem?: string): string {
   const rows = items.map(
     (item) =>
       `<li><label><input type="checkbox" data-subtask="${escapeHtml(item.id)}"${
@@ -79,7 +80,7 @@ export function subtasks(items: Subtask[]): string {
   return section(
     t.detail.subtasks,
     items.length > 0 ? `${done}/${items.length}` : undefined,
-    (rows.length > 0 ? list("subtasks", rows) : empty(t.detail.noSubtasks)) +
+    (rows.length > 0 ? list("subtasks", rows) : empty(problem ? t.common.sectionFailed(problem) : t.detail.noSubtasks)) +
       form(
         "subtask",
         field({ name: "title", placeholder: t.detail.newSubtask, autocomplete: "off" }),
@@ -88,17 +89,19 @@ export function subtasks(items: Subtask[]): string {
   );
 }
 
-export function time(entries: TimeEntry[]): string {
+export function time(entries: TimeEntry[], problem?: string): string {
   const rows = entries.map(
     (entry) =>
-      `<li><span class="hours">${escapeHtml(entry.hours ?? "")}</span><span>${escapeHtml(
+      `<li><span class="hours">${escapeHtml(formatMinutes(minutesOf(entry)))}</span><span class="grow">${escapeHtml(
         entry.description ?? "",
-      )}</span>${entry.logged_date ? chip(entry.logged_date) : ""}</li>`,
+      )}</span>${entry.date ? chip(entry.date) : ""}</li>`,
   );
   return section(
     t.detail.time,
-    entries.length > 0 ? sumHours(entries) : undefined,
-    (rows.length > 0 ? list("time", rows) : empty(t.detail.noTime)) +
+    entries.length > 0
+      ? formatMinutes(entries.reduce((total, entry) => total + minutesOf(entry), 0))
+      : undefined,
+    (rows.length > 0 ? list("time", rows) : empty(problem ? t.common.sectionFailed(problem) : t.detail.noTime)) +
       form(
         "time",
         field({ name: "hours", value: "1:00", size: "5", pattern: "\\d{1,3}:[0-5]\\d" }) +
@@ -112,17 +115,17 @@ export function time(entries: TimeEntry[]): string {
   );
 }
 
-export function comments(items: (Comment & { authorName?: string })[]): string {
+export function comments(items: (Comment & { authorName?: string })[], problem?: string): string {
   const rows = items.map((item) => {
     const when = formatWhen(item.created_at);
-    return `<li><p class="who">${escapeHtml(item.authorName ?? item.created_by ?? "")}${
+    return `<li><p class="who">${escapeHtml(item.authorName ?? "")}${
       when ? chip(when) : ""
-    }</p><div class="prose">${richText(item.content ?? "")}</div></li>`;
+    }</p><div class="prose">${richText(item.description)}</div></li>`;
   });
   return section(
     t.detail.comments,
     items.length > 0 ? String(items.length) : undefined,
-    (rows.length > 0 ? list("comments", rows) : empty(t.detail.noComments)) +
+    (rows.length > 0 ? list("comments", rows) : empty(problem ? t.common.sectionFailed(problem) : t.detail.noComments)) +
       form(
         "comment",
         `<textarea name="content" rows="3" placeholder="${escapeHtml(
@@ -138,8 +141,8 @@ export function renderBody(view: TaskView): string {
   return [
     header(view),
     description(view.task),
-    subtasks(view.subtasks),
-    time(view.time),
-    comments(view.comments),
+    subtasks(view.subtasks, view.problems?.subtasks),
+    time(view.time, view.problems?.time),
+    comments(view.comments, view.problems?.comments),
   ].join("\n");
 }

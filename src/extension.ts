@@ -3,6 +3,9 @@ import { connect, describeFailure, disconnect, restoreSession, type Session } fr
 import { ProjectsProvider, type Node } from "./tree.js";
 import { Timer } from "./timer.js";
 import { formatDuration, today } from "./time.js";
+import { parseHours } from "./format.js";
+import { sameId, type Id } from "./types.js";
+import { resolveMe } from "./me.js";
 import { parseAppUrl } from "./urls.js";
 import { t } from "./strings.js";
 import { TaskDetail } from "./detail.js";
@@ -22,13 +25,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const detail = new TaskDetail({
     session: () => session,
     onChanged: (node) => provider.refresh(provider.getParent(node)),
-    timerRunsOn: (taskId) => timer.running?.taskId === taskId,
+    timerRunsOn: (taskId) => sameId(timer.running?.taskId, taskId),
     startTimer: (node) => vscode.commands.executeCommand("proofhub.startTimer", node),
     stopTimer: () => vscode.commands.executeCommand("proofhub.stopTimer"),
     openInBrowser: (node) => vscode.commands.executeCommand("proofhub.openInBrowser", node),
   });
 
-  const report = new ReportPanel(() => session);
+  const whoAmI = async () =>
+    session ? resolveMe(context, session.client, { ask: true }) : undefined;
+
+  const report = new ReportPanel(() => session, whoAmI);
 
   const showFilter = () => {
     const parts: string[] = [];
@@ -273,9 +279,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     const chosen = new Set(picked.map((option) => option.key));
+    const meId = chosen.has("mine") ? (await whoAmI())?.id : undefined;
     provider.setFilter({
       ...provider.filter,
-      mine: chosen.has("mine"),
+      meId,
+      mine: chosen.has("mine") && meId !== undefined,
       hideCompleted: chosen.has("hideCompleted"),
       overdueOnly: chosen.has("overdueOnly"),
     });
@@ -364,7 +372,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     const hours = formatDuration(Date.now() - running.startedAt);
-    await logTimeFor(active, running.projectId, running.taskId, running.title, hours);
+    await logTimeFor(active, running, running.title, hours);
     await timer.stop();
     detail.refreshIfShowing(running.taskId);
   });
@@ -384,7 +392,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!hours) {
       return;
     }
-    await logTimeFor(active, node.project.id, node.task.id, node.task.title, hours.trim());
+    await logTimeFor(
+      active,
+      { projectId: node.project.id, todolistId: node.todolist.id, taskId: node.task.id },
+      node.task.title,
+      hours.trim(),
+    );
     detail.refreshIfShowing(node.task.id);
   });
 
@@ -400,7 +413,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         cancellable: true,
       },
       async (progress, token) => {
-        const me = await active.client.me();
+        const me = await whoAmI();
         const projects = await active.client.projects(false);
         const found: { label: string; description: string; node: Node }[] = [];
 
@@ -417,7 +430,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
               break;
             }
             for (const task of await active.client.tasks(project.id, todolist.id)) {
-              if (!task.completed && task.assigned?.includes(me.id)) {
+              if (!task.completed && (me ? (task.assigned ?? []).some((id) => sameId(id, me.id)) : task.by_me)) {
                 found.push({
                   label: task.title,
                   description: `${project.title} › ${todolist.title}`,
@@ -462,18 +475,17 @@ async function moveViewToRight(): Promise<void> {
   await vscode.commands.executeCommand("proofhub.projects.focus");
 }
 
-function idMatches(candidate: string, wanted: string): boolean {
+function idMatches(candidate: Id, wanted: Id): boolean {
   return String(candidate).replace(/^\D+-/, "") === String(wanted).replace(/^\D+-/, "");
 }
 
 async function logTimeFor(
   session: Session,
-  projectId: string,
-  taskId: string,
+  location: { projectId: Id; todolistId: Id; taskId: Id },
   taskTitle: string,
   hours: string,
 ): Promise<void> {
-  const sheets = await session.client.timesheets(projectId);
+  const sheets = await session.client.timesheets(location.projectId);
   if (sheets.length === 0) {
     vscode.window.showWarningMessage(t.time.noTimesheet);
     return;
@@ -483,7 +495,7 @@ async function logTimeFor(
       ? sheets[0]
       : await vscode.window
           .showQuickPick(
-            sheets.map((s) => ({ label: s.title, id: s.id })),
+            sheets.map((entry) => ({ label: entry.title, id: entry.id })),
             { title: t.time.timesheet, ignoreFocusOut: true },
           )
           .then((picked) => (picked ? { id: picked.id, title: picked.label } : undefined));
@@ -500,11 +512,16 @@ async function logTimeFor(
     return;
   }
 
-  await session.client.logTime(projectId, sheet.id, {
-    hours,
+  const minutes = parseHours(hours);
+  await session.client.logTime({
+    project: location.projectId,
+    timesheet_id: sheet.id,
+    date: today(),
+    logged_hours: String(Math.floor(minutes / 60)),
+    logged_mins: String(minutes % 60),
     description: description.trim(),
-    logged_date: today(),
-    task_id: taskId,
+    list_id: location.todolistId,
+    task_id: location.taskId,
   });
   vscode.window.showInformationMessage(t.time.logged(hours, taskTitle));
 }

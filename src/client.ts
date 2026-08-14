@@ -2,11 +2,14 @@ import { RateLimiter } from "./rate-limit.js";
 import { appPath, type Location } from "./urls.js";
 import type {
   Comment,
+  Id,
+  NewTimeEntry,
   Person,
   Project,
   Subtask,
   Task,
   TimeEntry,
+  Timesheet,
   Todolist,
 } from "./types.js";
 
@@ -136,22 +139,22 @@ export class ProofHubClient {
     return this.request<Person[]>("GET", "people");
   }
 
-  todolists(projectId: string): Promise<Todolist[]> {
+  todolists(projectId: Id): Promise<Todolist[]> {
     return this.request<Todolist[]>("GET", `projects/${projectId}/todolists`);
   }
 
-  tasks(projectId: string, todolistId: string): Promise<Task[]> {
+  tasks(projectId: Id, todolistId: Id): Promise<Task[]> {
     return this.request<Task[]>("GET", `projects/${projectId}/todolists/${todolistId}/tasks`);
   }
 
-  createTask(projectId: string, todolistId: string, task: Partial<Task>): Promise<Task> {
+  createTask(projectId: Id, todolistId: Id, task: Partial<Task>): Promise<Task> {
     return this.request<Task>("POST", `projects/${projectId}/todolists/${todolistId}/tasks`, task);
   }
 
   updateTask(
-    projectId: string,
-    todolistId: string,
-    taskId: string,
+    projectId: Id,
+    todolistId: Id,
+    taskId: Id,
     changes: Partial<Task>,
   ): Promise<Task> {
     return this.request<Task>(
@@ -161,38 +164,33 @@ export class ProofHubClient {
     );
   }
 
-  completeTask(projectId: string, todolistId: string, taskId: string): Promise<Task> {
+  completeTask(projectId: Id, todolistId: Id, taskId: Id): Promise<Task> {
     return this.updateTask(projectId, todolistId, taskId, { completed: true });
   }
 
-  comments(projectId: string, todolistId: string, taskId: string): Promise<Comment[]> {
+  comments(projectId: Id, todolistId: Id, taskId: Id): Promise<Comment[]> {
     return this.request<Comment[]>(
       "GET",
       `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/comments`,
     );
   }
 
-  addComment(
-    projectId: string,
-    todolistId: string,
-    taskId: string,
-    content: string,
-  ): Promise<Comment> {
+  addComment(projectId: Id, todolistId: Id, taskId: Id, description: string): Promise<Comment> {
     return this.request<Comment>(
       "POST",
       `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/comments`,
-      { content },
+      { description },
     );
   }
 
-  task(projectId: string, todolistId: string, taskId: string): Promise<Task> {
+  task(projectId: Id, todolistId: Id, taskId: Id): Promise<Task> {
     return this.request<Task>(
       "GET",
       `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}`,
     );
   }
 
-  subtasks(projectId: string, todolistId: string, taskId: string): Promise<Subtask[]> {
+  subtasks(projectId: Id, todolistId: Id, taskId: Id): Promise<Subtask[]> {
     return this.request<Subtask[]>(
       "GET",
       `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/subtasks`,
@@ -200,9 +198,9 @@ export class ProofHubClient {
   }
 
   createSubtask(
-    projectId: string,
-    todolistId: string,
-    taskId: string,
+    projectId: Id,
+    todolistId: Id,
+    taskId: Id,
     subtask: Partial<Subtask>,
   ): Promise<Subtask> {
     return this.request<Subtask>(
@@ -213,10 +211,10 @@ export class ProofHubClient {
   }
 
   updateSubtask(
-    projectId: string,
-    todolistId: string,
-    taskId: string,
-    subtaskId: string,
+    projectId: Id,
+    todolistId: Id,
+    taskId: Id,
+    subtaskId: Id,
     changes: Partial<Subtask>,
   ): Promise<Subtask> {
     return this.request<Subtask>(
@@ -226,18 +224,18 @@ export class ProofHubClient {
     );
   }
 
-  timeEntries(projectId: string, timesheetId: string): Promise<TimeEntry[]> {
+  timeEntries(projectId: Id, timesheetId: Id): Promise<TimeEntry[]> {
     return this.request<TimeEntry[]>("GET", `projects/${projectId}/timesheets/${timesheetId}/time`);
   }
 
-  timesheets(projectId: string): Promise<{ id: string; title: string }[]> {
-    return this.request<{ id: string; title: string }[]>("GET", `projects/${projectId}/timesheets`);
+  timesheets(projectId: Id): Promise<Timesheet[]> {
+    return this.request<Timesheet[]>("GET", `projects/${projectId}/timesheets`);
   }
 
-  logTime(projectId: string, timesheetId: string, entry: Partial<TimeEntry>): Promise<TimeEntry> {
+  logTime(entry: NewTimeEntry): Promise<TimeEntry> {
     return this.request<TimeEntry>(
       "POST",
-      `projects/${projectId}/timesheets/${timesheetId}/time`,
+      `projects/${entry.project}/timesheets/${entry.timesheet_id}/time`,
       entry,
     );
   }

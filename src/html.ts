@@ -56,16 +56,16 @@ for (const [accent, glyphs] of Object.entries(ACCENTS)) {
   }
 }
 
-export function escapeHtml(value: string): string {
-  return value
+export function escapeHtml(value: unknown): string {
+  return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
 
-export function decodeEntities(value: string): string {
-  return value.replace(/&(#x?[0-9a-f]+|[a-z][a-z0-9]*);/gi, (whole, body: string) => {
+export function decodeEntities(value: unknown): string {
+  return String(value ?? "").replace(/&(#x?[0-9a-f]+|[a-z][a-z0-9]*);/gi, (whole, body: string) => {
     if (body.startsWith("#")) {
       const code = body[1] === "x" || body[1] === "X" ? parseInt(body.slice(2), 16) : Number(body.slice(1));
       return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
@@ -74,7 +74,8 @@ export function decodeEntities(value: string): string {
   });
 }
 
-export function unescapeSource(value: string): string {
+export function unescapeSource(input: unknown): string {
+  const value = String(input ?? "");
   const looksLikeMarkup = /<[a-z!/]/i.test(value);
   return !looksLikeMarkup && /&(lt|#0*60|#x0*3c);/i.test(value) ? decodeEntities(value) : value;
 }
@@ -90,8 +91,8 @@ const KEEP_AS = new Map([
   ["h3", "h4"],
 ]);
 
-export function richText(source: string): string {
-  const markup = unescapeSource(source ?? "").replace(
+export function richText(source: unknown): string {
+  const markup = unescapeSource(source).replace(
     /<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,
     "",
   );
@@ -164,9 +165,9 @@ function openLink(attributes: string): string {
     : "<a>";
 }
 
-export function plainText(source: string): string {
+export function plainText(source: unknown): string {
   return decodeEntities(
-    unescapeSource(source ?? "")
+    unescapeSource(source)
       .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "")
       .replace(/<\/?(br|p|div|li|tr|h[1-6])\b[^>]*>/gi, "\n")
       .replace(/<[^>]*>/g, ""),
@@ -176,7 +177,7 @@ export function plainText(source: string): string {
     .trim();
 }
 
-export function firstLine(source: string, limit = 120): string {
+export function firstLine(source: unknown, limit = 120): string {
   const text = plainText(source).split("\n")[0] ?? "";
   return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }

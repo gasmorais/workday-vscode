@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { ProofHubClient, ProofHubError, looksLikeKey, normalizeAccount } from "./client.js";
 import { personName, type Person } from "./types.js";
 import { watchClipboardForKey } from "./key-watch.js";
+import { verifyKey } from "./me.js";
 import { t } from "./strings.js";
 
 const SECRET_PREFIX = "proofhub.apiKey";
@@ -116,7 +117,7 @@ export async function connect(
           readClipboard: () => Promise.resolve(vscode.env.clipboard.readText()),
           validate: async (candidate) => {
             try {
-              person = await buildClient(account, candidate).me();
+              person = await verifyKey(buildClient(account, candidate));
               return true;
             } catch (error) {
               if (error instanceof ProofHubError && !error.isAuthFailure) {
@@ -165,7 +166,7 @@ export async function connect(
     try {
       person = await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: t.connect.checking(account) },
-        () => buildClient(account, apiKey!).me(),
+        () => verifyKey(buildClient(account, apiKey!)),
       );
     } catch (error) {
       const retry = await vscode.window.showErrorMessage(describeFailure(error), t.connect.retry);

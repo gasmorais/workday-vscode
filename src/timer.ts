@@ -1,12 +1,14 @@
 import * as vscode from "vscode";
 import { formatDuration } from "./time.js";
+import { t } from "./strings.js";
+import type { Id } from "./types.js";
 
 const STATE_KEY = "proofhub.runningTimer";
 
 export interface RunningTimer {
-  projectId: string;
-  todolistId: string;
-  taskId: string;
+  projectId: Id;
+  todolistId: Id;
+  taskId: Id;
   title: string;
   startedAt: number;
 }
@@ -48,7 +50,7 @@ export class Timer {
     const paint = () => {
       const elapsed = formatDuration(Date.now() - running.startedAt);
       this.item.text = `$(watch) ${elapsed}  ${running.title}`;
-      this.item.tooltip = "Click to stop and log the time in ProofHub";
+      this.item.tooltip = t.time.stopHint;
       this.item.show();
     };
     paint();

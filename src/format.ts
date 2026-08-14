@@ -30,8 +30,8 @@ export function formatWhen(value: string | undefined): string {
     .slice(11, 16)}`;
 }
 
-export function toDate(value: string | number | undefined): Date | undefined {
-  if (value === undefined || value === "") {
+export function toDate(value: string | number | null | undefined): Date | undefined {
+  if (value === undefined || value === null || value === "") {
     return undefined;
   }
   const text = String(value);
@@ -39,15 +39,15 @@ export function toDate(value: string | number | undefined): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-export function dayKey(value: string | number | undefined): string {
+export function dayKey(value: string | number | null | undefined): string {
   return toDate(value)?.toISOString().slice(0, 10) ?? "";
 }
 
-export function monthKey(value: string | number | undefined): string {
+export function monthKey(value: string | number | null | undefined): string {
   return dayKey(value).slice(0, 7);
 }
 
-export function weekKey(value: string | number | undefined): string {
+export function weekKey(value: string | number | null | undefined): string {
   const date = toDate(value);
   if (!date) {
     return "";

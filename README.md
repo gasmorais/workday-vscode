@@ -84,6 +84,17 @@ O fluxo pergunta na ordem: projeto, lista, título, responsáveis, prazo e tempo
 | `ProofHub: Trocar de conta` | conectar em outra conta |
 | `ProofHub: Mover painel para a barra da direita` | reposicionar a árvore |
 
+## Contrato da API
+
+Os campos seguem a [documentação oficial da API v3](https://github.com/ProofHub/api_v3), e não o que parecia razoável supor:
+
+- os identificadores são **números**, não texto, e a comparação é sempre feita por `sameId`;
+- o texto de um comentário fica em `description`, e o autor em `creator.id`;
+- horas vêm em `logged_hours` e `logged_mins` separados, com a data em `date`, e o lançamento exige `project`, `timesheet_id`, `list_id` e `task_id`;
+- não existe endpoint `/me`. A validação da chave cai para `GET /projects` e a identidade é resolvida pelo e-mail de contato ou por uma escolha única na lista de pessoas, guardada na máquina.
+
+Quando uma seção do painel falha, ela diz o motivo em vez de aparecer vazia.
+
 ## Sincronização
 
 Toda ação recarrega a tarefa e invalida só o galho afetado da árvore, então o que você vê é o que o ProofHub tem, sem varrer a conta inteira. Ao voltar o foco para a janela do VS Code, projetos e tarefa aberta são recarregados, para pegar o que a equipe mexeu no navegador. Isso é o `proofhub.syncOnFocus`, que dá para desligar em conexão ruim.
@@ -132,4 +143,5 @@ A suíte roda sem tocar a rede, com `fetch`, relógio e área de transferência 
 
 - Discussões, notas e anexos.
 - Editar prazo, responsável e estimativa depois que a tarefa existe.
+- Anexos e etiquetas.
 - Atualização em tempo real. A sincronização acontece por ação e ao voltar o foco da janela.

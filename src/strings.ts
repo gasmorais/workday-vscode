@@ -23,11 +23,16 @@ export const t = {
     rejected: "O ProofHub recusou a chave. Rode ProofHub: Conectar para informar outra.",
     failure: (status: number, message: string) => `Erro ${status} do ProofHub: ${message}`,
   },
+  me: {
+    whoAreYou: "Qual desses é você",
+    whoAreYouHint: "A conta não expõe quem é o dono da chave, então escolha uma vez só",
+  },
   common: {
     connectFirst: "Conecte no ProofHub primeiro.",
     loading: "Carregando…",
     tryAgain: "Tentar de novo",
     nobody: "Ninguém",
+    sectionFailed: (motivo: string) => `Não deu para carregar esta parte: ${motivo}`,
   },
   tree: {
     subtasks: (count: number) => (count === 1 ? "1 subtarefa" : `${count} subtarefas`),
@@ -58,6 +63,7 @@ export const t = {
     logged: (hours: string, title: string) => `${hours} lançadas em ${title}.`,
     alreadyRunning: (title: string) => `Já existe um cronômetro rodando em ${title}.`,
     notRunning: "Nenhum cronômetro está rodando.",
+    stopHint: "Clique para parar e lançar as horas no ProofHub",
   },
   mine: {
     collecting: "Reunindo suas tarefas abertas",
