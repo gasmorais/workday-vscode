@@ -25,6 +25,7 @@ export const STATE_TEAMS_FAVORITES = "proofhub.teams.favorites";
 
 export const TEAMS_LOCAL_PORT = 8124;
 export const TEAMS_LOCAL_PROTOCOL = "2.0.0";
+export const MAC_POLL_SECONDS = 10;
 export const TEAMS_RECONNECT_MS = 15_000;
 export const MIN_CALL_MINUTES = 2;
 export const CHAT_PAGE_SIZE = 30;

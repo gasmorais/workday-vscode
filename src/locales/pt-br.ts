@@ -213,6 +213,9 @@ export const ptBR = {
       `Ninguém está atribuído a ${kind}, então ela não aparece na fila de nenhuma pessoa.`,
   },
   teams: {
+    macDenied: (reason: string) =>
+      `Nao consegui ler as janelas do Teams. Libere o VS Code em Ajustes do Sistema, Privacidade e Seguranca, Acessibilidade. ${reason}`,
+    callWith: (title: string) => `Call: ${title}`,
     localUnreachable:
       "O Teams nao respondeu na porta local. Ligue o API de aplicativos de terceiros nas configuracoes do Teams, em Privacidade.",
     callsWatching: "Ligado ao Teams desta maquina. As calls viram horas.",

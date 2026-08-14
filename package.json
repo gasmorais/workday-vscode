@@ -391,6 +391,17 @@
           "type": "number",
           "default": 5,
           "description": "%config.teams.roundMinutes%"
+        },
+        "proofhub.teams.macPollSeconds": {
+          "type": "number",
+          "default": 10,
+          "minimum": 2,
+          "markdownDescription": "%config.teams.macPollSeconds%"
+        },
+        "proofhub.teams.callWindowPattern": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%config.teams.callWindowPattern%"
         }
       }
     }

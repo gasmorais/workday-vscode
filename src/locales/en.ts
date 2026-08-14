@@ -214,6 +214,9 @@ export const en: Strings = {
       `Nobody is assigned to ${kind}, so it shows up in no one's queue.`,
   },
   teams: {
+    macDenied: (reason: string) =>
+      `Could not read the Teams windows. Allow VS Code under System Settings, Privacy and Security, Accessibility. ${reason}`,
+    callWith: (title: string) => `Call: ${title}`,
     localUnreachable:
       "Teams did not answer on the local port. Turn on the third-party app API in Teams settings, under Privacy.",
     callsWatching: "Connected to Teams on this machine. Calls will become hours.",

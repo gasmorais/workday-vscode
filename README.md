@@ -41,30 +41,34 @@ The key belongs to you, not to the team. It is validated on connection and store
 
 Read [docs/teams-setup.md](docs/teams-setup.md) for the sign-in and the local API. In short:
 
-- **Chats** listed with pinned ones first, opened in a panel where you read the history and write back.
+- **Chats** listed with pinned ones first, opened in a panel where you read the history and write back. Needs your own Azure application, because Microsoft does not preauthorize the chat scopes for the editor's built-in account.
 - **Today's meetings** from the calendar, with a join button that opens Teams.
 - **Live call state** in the status bar, showing elapsed time, mute and screen share.
 - **Call to hours**: when a call ends, the extension offers to log it against one of your open ProofHub tasks.
+
+Call tracking works without any Azure application. It prefers the Teams local API and falls back to reading the Teams window titles on macOS, which needs nothing but the Accessibility permission. Run `Workday: Track Teams Calls` to turn it on.
 
 Joining a call inside the editor is not possible, and neither is setting your Teams status message. The reasons are in the setup document.
 
 ## Settings
 
-| Setting                       | Default                | What it does                                                                |
-| ----------------------------- | ---------------------- | --------------------------------------------------------------------------- |
-| `proofhub.account`            | empty                  | ProofHub account address. Asked on the first connection.                    |
-| `proofhub.contactEmail`       | empty                  | Contact e-mail sent in the `User-Agent` header, required by the API.        |
-| `proofhub.archivedProjects`   | `false`                | Include archived projects in the tree.                                      |
-| `proofhub.apiPagePath`        | `bapplite/#app/me/api` | Path of the API access page opened by Connect.                              |
-| `proofhub.openOnRight`        | `true`                 | Move the panel to the right sidebar on first open.                          |
-| `proofhub.syncOnFocus`        | `true`                 | Reload when the window regains focus.                                       |
-| `proofhub.autoRefreshMinutes` | `0`                    | Refresh the tree on a timer while the window has focus. Zero turns it off.  |
-| `proofhub.cacheSeconds`       | `60`                   | How long the tree keeps data before asking again.                           |
-| `proofhub.dailyGoal`          | `8:00`                 | Reference line of the days chart.                                           |
-| `proofhub.teams.clientId`     | empty                  | Azure AD application id. Empty uses the built-in VS Code Microsoft account. |
-| `proofhub.teams.tenantId`     | empty                  | Tenant id or domain to pin the sign-in to.                                  |
-| `proofhub.teams.localPort`    | `8124`                 | Port of the Teams third-party app API.                                      |
-| `proofhub.teams.roundMinutes` | `5`                    | Rounding block for call time before logging.                                |
+| Setting                            | Default                | What it does                                                                      |
+| ---------------------------------- | ---------------------- | --------------------------------------------------------------------------------- |
+| `proofhub.account`                 | empty                  | ProofHub account address. Asked on the first connection.                          |
+| `proofhub.contactEmail`            | empty                  | Contact e-mail sent in the `User-Agent` header, required by the API.              |
+| `proofhub.archivedProjects`        | `false`                | Include archived projects in the tree.                                            |
+| `proofhub.apiPagePath`             | `bapplite/#app/me/api` | Path of the API access page opened by Connect.                                    |
+| `proofhub.openOnRight`             | `true`                 | Move the panel to the right sidebar on first open.                                |
+| `proofhub.syncOnFocus`             | `true`                 | Reload when the window regains focus.                                             |
+| `proofhub.autoRefreshMinutes`      | `0`                    | Refresh the tree on a timer while the window has focus. Zero turns it off.        |
+| `proofhub.cacheSeconds`            | `60`                   | How long the tree keeps data before asking again.                                 |
+| `proofhub.dailyGoal`               | `8:00`                 | Reference line of the days chart.                                                 |
+| `proofhub.teams.clientId`          | empty                  | Azure AD application id. Empty uses the built-in VS Code Microsoft account.       |
+| `proofhub.teams.tenantId`          | empty                  | Tenant id or domain to pin the sign-in to.                                        |
+| `proofhub.teams.localPort`         | `8124`                 | Port of the Teams third-party app API.                                            |
+| `proofhub.teams.macPollSeconds`    | `10`                   | How often to check the Teams windows for a call, in seconds. macOS only.          |
+| `proofhub.teams.callWindowPattern` | `""`                   | Regular expression matching a call window title. Empty uses the built-in pattern. |
+| `proofhub.teams.roundMinutes`      | `5`                    | Rounding block for call time before logging.                                      |
 
 ## Language
 

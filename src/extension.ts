@@ -17,6 +17,7 @@ import { GraphClient } from "./teams/graph.js";
 import { TeamsProvider, type TeamsNode } from "./teams/tree.js";
 import { ChatPanel } from "./teams/chat-panel.js";
 import { TeamsLocalApi } from "./teams/local-api.js";
+import { MacCallWatcher } from "./teams/mac-calls.js";
 import {
   CallTracker,
   roundedHours,
@@ -714,6 +715,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const callWatch = new TeamsLocalApi(context);
   context.subscriptions.push(callWatch);
   let lastCall: CallSession | undefined;
+  let callTitle: string | undefined;
 
   const paintCall = (state: MeetingState | undefined) => {
     if (!tracker.running || !state) {
@@ -725,29 +727,41 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       .filter(Boolean)
       .join(", ");
     callBar.text = `$(device-camera-video) ${elapsed}${marks ? ` (${marks})` : ""}`;
-    callBar.tooltip = t.teams.callFor(elapsed);
+    callBar.tooltip = callTitle
+      ? `${callTitle} - ${t.teams.callFor(elapsed)}`
+      : t.teams.callFor(elapsed);
     callBar.show();
   };
 
+  const handleState = async (state: MeetingState) => {
+    const finished = tracker.update(state, Date.now());
+    paintCall(state);
+    if (!finished) {
+      return;
+    }
+    lastCall = finished;
+    callBar.hide();
+    const elapsed = formatDuration(finished.endedAt - finished.startedAt);
+    const answer = await vscode.window.showInformationMessage(
+      t.teams.callEnded(elapsed),
+      t.teams.callLog,
+      t.teams.callSkip,
+    );
+    if (answer === t.teams.callLog) {
+      await vscode.commands.executeCommand("proofhub.teams.logCall");
+    }
+  };
+
+  const macWatch = new MacCallWatcher();
+  context.subscriptions.push(macWatch);
+
   context.subscriptions.push(
-    callWatch.onMeeting(async (state) => {
-      const finished = tracker.update(state, Date.now());
-      paintCall(state);
-      if (!finished) {
-        return;
-      }
-      lastCall = finished;
-      callBar.hide();
-      const elapsed = formatDuration(finished.endedAt - finished.startedAt);
-      const answer = await vscode.window.showInformationMessage(
-        t.teams.callEnded(elapsed),
-        t.teams.callLog,
-        t.teams.callSkip,
-      );
-      if (answer === t.teams.callLog) {
-        await vscode.commands.executeCommand("proofhub.teams.logCall");
-      }
+    callWatch.onMeeting((state) => void handleState(state)),
+    macWatch.onCall((call) => {
+      callTitle = call.title;
+      void handleState({ isInMeeting: call.inCall });
     }),
+    macWatch.onProblem((reason) => vscode.window.showWarningMessage(reason)),
   );
 
   command("proofhub.teams.logCall", async () => {
@@ -765,8 +779,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       { projectId: node.project.id, todolistId: node.todolist.id, taskId: node.task.id },
       node.task.title,
       roundedHours(call.minutes),
+      callTitle ? t.teams.callWith(callTitle) : undefined,
     );
     lastCall = undefined;
+    callTitle = undefined;
     detail.refreshIfShowing(node.task.id);
   });
 
@@ -775,24 +791,30 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await vscode.commands.executeCommand("setContext", "proofhub.callsWatched", true);
       vscode.window.showInformationMessage(t.teams.callsWatching);
     }),
-    callWatch.onProblem((reason) => vscode.window.showWarningMessage(reason)),
+    callWatch.onProblem((reason) => {
+      if (!macWatch.running) {
+        vscode.window.showWarningMessage(reason);
+      }
+    }),
   );
 
   command("proofhub.teams.watchCalls", async () => {
     await context.globalState.update(STATE_TEAMS_WATCH, true);
-    vscode.window.showInformationMessage(t.teams.callsPairing);
+    macWatch.start();
     await callWatch.start();
   });
 
   command("proofhub.teams.stopCalls", async () => {
     await context.globalState.update(STATE_TEAMS_WATCH, false);
     callWatch.stop();
+    macWatch.stop();
     callBar.hide();
     await vscode.commands.executeCommand("setContext", "proofhub.callsWatched", false);
     vscode.window.showInformationMessage(t.teams.callsStopped);
   });
 
   if (context.globalState.get<boolean>(STATE_TEAMS_WATCH)) {
+    macWatch.start();
     void callWatch.start();
   }
 
@@ -823,6 +845,7 @@ async function logTimeFor(
   location: { projectId: Id; todolistId: Id; taskId: Id },
   taskTitle: string,
   hours: string,
+  suggestion?: string,
 ): Promise<void> {
   const sheets = await session.client.timesheets(location.projectId);
   if (sheets.length === 0) {
@@ -845,6 +868,7 @@ async function logTimeFor(
   const description = await vscode.window.showInputBox({
     title: t.time.logTitle(taskTitle),
     prompt: t.time.whatPrompt,
+    value: suggestion,
     ignoreFocusOut: true,
   });
   if (description === undefined) {

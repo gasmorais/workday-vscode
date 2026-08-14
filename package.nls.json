@@ -46,5 +46,7 @@
   "config.teams.localPort": "Port of the Teams third-party app API on this computer.",
   "config.teams.roundMinutes": "Round call time up to this many minutes before logging it.",
   "command.teams.watchCalls": "Track Teams Calls",
-  "command.teams.stopCalls": "Stop Tracking Teams Calls"
+  "command.teams.stopCalls": "Stop Tracking Teams Calls",
+  "config.teams.macPollSeconds": "How often to check the Teams windows for a call, in seconds. macOS only.",
+  "config.teams.callWindowPattern": "Regular expression matching a Teams window title that means a call is running. Leave empty for the built-in pattern."
 }

@@ -64,6 +64,16 @@ Change `proofhub.teams.localPort` if your client listens elsewhere.
 
 Nothing about the call leaves your machine through this channel. The extension only learns whether you are in a meeting and whether the microphone, camera and screen share are on.
 
+## macOS window watch
+
+When the local API is unavailable, which happens when the tenant blocks third-party device pairing and the toggle is missing from Teams settings, the extension falls back to reading the Teams window titles through AppleScript. A window such as `Meeting compact view | Someone | Microsoft Teams` means a call is running, and the middle segment becomes the suggested description of the logged time.
+
+This needs no Azure application, no tenant policy and no Teams setting. The first check asks for Accessibility permission: allow your editor under System Settings, Privacy and Security, Accessibility.
+
+It reads window titles only, never message content. It cannot tell whether you are muted or sharing, and it notices the end of a call within `proofhub.teams.macPollSeconds`, ten seconds by default. If your Teams runs in a language whose call windows are named differently, set `proofhub.teams.callWindowPattern` to a regular expression that matches them.
+
+Both sources feed the same tracker, so running them together is safe.
+
 ## Call to hours
 
 While a call runs, a status bar entry shows the elapsed time and whether you are muted or sharing. When the call ends, the extension asks whether to log it. Accepting opens the picker of your open ProofHub tasks, then the usual timesheet and description prompts.
