@@ -6,10 +6,12 @@ Extensão interna que traz projetos, tarefas, comentários e apontamento de hora
 
 O ProofHub **não tem OAuth**. A API v3 aceita apenas uma chave pessoal enviada no cabeçalho `X-API-KEY`, então não existe o fluxo de abrir o navegador e voltar autenticado sozinho. O comando `ProofHub: Connect` faz o mais próximo disso:
 
-1. Pergunta o host da conta, por exemplo `acme.proofhub.com`.
+1. Já vem apontada para `acme.proofhub.com`, então não pergunta nada de conta. Para outra conta, use `ProofHub: Change Account`.
 2. Abre o navegador na conta. A chave fica no ícone de perfil, no canto inferior esquerdo, em **API access**.
 3. Ao voltar para o VS Code, a chave é lida da área de transferência e já vem preenchida no campo. Basta confirmar.
-4. A chave é validada com uma chamada real antes de ser aceita.
+4. A chave é validada com uma chamada real antes de ser aceita. Se falhar, o erro aparece com a opção de tentar de novo, sem recomeçar o fluxo.
+
+Quem já tem a chave em mãos pode pular o navegador pelo botão **I already have the key**.
 
 A chave é **por desenvolvedor** e fica no SecretStorage do VS Code, nunca em arquivo de configuração nem no repositório. Isso importa porque toda ação registra autoria no ProofHub: com a chave de outra pessoa, as tarefas apareceriam criadas por ela.
 
@@ -28,8 +30,20 @@ O e-mail de contato exigido pelo cabeçalho `User-Agent` é preenchido sozinho a
 | `ProofHub: Log Time` | lançar horas manualmente, no formato `H:MM` |
 | `ProofHub: My Tasks` | listar suas tarefas abertas em todos os projetos |
 | `ProofHub: Open in Browser` | abrir o item no ProofHub |
+| `ProofHub: Open Link from URL` | colar um link do ProofHub e revelar o item na árvore |
+| `ProofHub: Change Account` | conectar em outra conta |
 
 A barra lateral mostra projetos, listas e tarefas, com prazo e contagem de subtarefas ao lado do título.
+
+## Links
+
+As URLs seguem o formato do app: `https://acme.proofhub.com/bapplite/#app/todos/project-{id}/list-{id}`. A extensão monta e interpreta esse formato, então um link colado é resolvido em projeto e lista e revelado na árvore, e um link de outra conta é recusado com aviso em vez de abrir errado.
+
+A rota direta para uma tarefa individual não foi confirmada contra o app, então abrir uma tarefa leva à lista que a contém, a não ser que a própria API devolva a URL da tarefa.
+
+## Confiança do workspace
+
+A extensão declara suporte a workspace não confiável e a workspace virtual: ela só fala com a API do ProofHub e nunca executa código do projeto aberto. Por isso funciona sem pedir confiança e não aparece desabilitada em pastas restritas.
 
 ## Limite de requisições
 
@@ -51,4 +65,4 @@ Os testes cobrem o cliente HTTP com `fetch` injetado, sem tocar a rede: montagem
 - Discussões e anexos.
 - Editar tarefa depois de criada, além de concluir.
 - Relatórios agregados de tempo. Hoje o apontamento é individual, por tarefa.
-- Atualização automática da árvore. É preciso usar `ProofHub: Refresh` após mudanças feitas fora do editor.
+- Atualização automática da árvore. Os resultados ficam em cache para poupar a cota, então mudanças feitas fora do editor exigem `ProofHub: Refresh`.

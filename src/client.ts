@@ -1,4 +1,5 @@
 import { RateLimiter } from "./rate-limit.js";
+import { appPath, type Location } from "./urls.js";
 import type {
   Comment,
   Person,
@@ -73,6 +74,14 @@ export class ProofHubClient {
 
   webUrl(path: string): string {
     return `https://${this.host}/${path.replace(/^\//, "")}`;
+  }
+
+  get accountHost(): string {
+    return this.host;
+  }
+
+  appUrl(location: Location): string {
+    return this.webUrl(appPath(location));
   }
 
   async request<T>(method: string, path: string, body?: unknown): Promise<T> {

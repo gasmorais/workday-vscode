@@ -35,7 +35,7 @@
     "viewsWelcome": [
       {
         "view": "proofhub.projects",
-        "contents": "Connect to your ProofHub account to see projects and tasks here.\n[Connect to ProofHub](command:proofhub.connect)\n\nThe key is personal and stays in the VS Code secret storage on this machine."
+        "contents": "Connect to ProofHub to see projects and tasks here.\n[Connect to ProofHub](command:proofhub.connect)\n\nThe key is personal, validated on connect, and stored in the VS Code secret storage on this machine."
       }
     ],
     "commands": [
@@ -90,6 +90,14 @@
       {
         "command": "proofhub.myTasks",
         "title": "ProofHub: My Tasks"
+      },
+      {
+        "command": "proofhub.openUrl",
+        "title": "ProofHub: Open Link from URL"
+      },
+      {
+        "command": "proofhub.changeAccount",
+        "title": "ProofHub: Change Account"
       }
     ],
     "menus": {
@@ -138,8 +146,8 @@
       "properties": {
         "proofhub.account": {
           "type": "string",
-          "default": "",
-          "description": "Your ProofHub account host, for example acme.proofhub.com."
+          "default": "acme.proofhub.com",
+          "description": "ProofHub account host. Defaults to the your company account."
         },
         "proofhub.contactEmail": {
           "type": "string",
@@ -165,5 +173,12 @@
     "@types/vscode": "^1.90.0",
     "@vscode/vsce": "^3.9.2",
     "typescript": "^5.6.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "The extension only talks to the ProofHub API and never runs workspace code."
+    },
+    "virtualWorkspaces": true
   }
 }

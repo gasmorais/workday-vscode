@@ -48,41 +48,55 @@ export async function restoreSession(
 
 export async function connect(
   context: vscode.ExtensionContext,
+  options: { askAccount?: boolean } = {},
 ): Promise<Session | undefined> {
-  const previous = settings().get<string>("account")?.trim() ?? "";
-  const answer = await vscode.window.showInputBox({
-    title: "ProofHub account",
-    prompt: "The host of your ProofHub account",
-    placeHolder: "acme.proofhub.com",
-    value: previous,
-    ignoreFocusOut: true,
-    validateInput: (value) => {
-      try {
-        normalizeAccount(value);
-        return undefined;
-      } catch {
-        return "Enter a host such as acme.proofhub.com";
-      }
-    },
-  });
-  if (!answer) {
-    return undefined;
+  const configured = settings().get<string>("account")?.trim() ?? "";
+  let account: string;
+
+  if (options.askAccount || !configured) {
+    const answer = await vscode.window.showInputBox({
+      title: "ProofHub account",
+      prompt: "The host of your ProofHub account",
+      placeHolder: "acme.proofhub.com",
+      value: configured,
+      ignoreFocusOut: true,
+      validateInput: (value) => {
+        try {
+          normalizeAccount(value);
+          return undefined;
+        } catch {
+          return "Enter a host such as acme.proofhub.com";
+        }
+      },
+    });
+    if (!answer) {
+      return undefined;
+    }
+    account = normalizeAccount(answer);
+  } else {
+    account = normalizeAccount(configured);
   }
-  const account = normalizeAccount(answer);
 
   const proceed = await vscode.window.showInformationMessage(
-    "ProofHub has no OAuth, so the key is copied by hand once.",
+    `Connect to ${account}`,
     {
       modal: true,
       detail:
-        "The browser opens on your account. Click the profile icon at the bottom left, choose API access, and copy the key. Come back here and it is picked up from the clipboard automatically.",
+        "ProofHub has no OAuth, so the key is copied by hand once. The browser opens on the account: click the profile icon at the bottom left, choose API access, and copy the key. Back in VS Code it is picked up from the clipboard automatically.",
     },
     "Open ProofHub",
+    "I already have the key",
+    "Change account",
   );
-  if (proceed !== "Open ProofHub") {
+  if (!proceed) {
     return undefined;
   }
-  await vscode.env.openExternal(vscode.Uri.parse(`https://${account}/`));
+  if (proceed === "Change account") {
+    return connect(context, { askAccount: true });
+  }
+  if (proceed === "Open ProofHub") {
+    await vscode.env.openExternal(vscode.Uri.parse(`https://${account}/bapplite/`));
+  }
 
   const clipboard = (await vscode.env.clipboard.readText()).trim();
   const suggestion = looksLikeKey(clipboard) ? clipboard : "";
@@ -100,11 +114,22 @@ export async function connect(
     return undefined;
   }
 
-  const client = buildClient(account, apiKey.trim());
-  const person = await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: "Checking the ProofHub key" },
-    () => client.me(),
-  );
+  const client = new ProofHubClient({
+    account,
+    apiKey: apiKey.trim(),
+    contactEmail: settings().get<string>("contactEmail") ?? "",
+  });
+
+  let person;
+  try {
+    person = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `Checking the key for ${account}` },
+      () => client.me(),
+    );
+  } catch (error) {
+    const retry = await vscode.window.showErrorMessage(describeFailure(error), "Try again");
+    return retry ? connect(context, options) : undefined;
+  }
 
   await context.secrets.store(secretKey(account), apiKey.trim());
   await settings().update("account", account, vscode.ConfigurationTarget.Global);

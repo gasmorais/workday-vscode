@@ -4,6 +4,7 @@ import { ProjectsProvider, type Node } from "./tree.js";
 import { Timer } from "./timer.js";
 import { formatDuration, today } from "./time.js";
 import { personName, type Task } from "./types.js";
+import { parseAppUrl } from "./urls.js";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const provider = new ProjectsProvider();
@@ -58,14 +59,73 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!active || !node) {
       return;
     }
-    const target =
-      node.kind === "task"
-        ? node.task.url ?? `todos/${node.task.id}`
+    const url =
+      node.kind === "project"
+        ? active.client.appUrl({ projectId: node.project.id })
         : node.kind === "todolist"
-          ? node.todolist.id && `todolists/${node.todolist.id}`
-          : node.project.url ?? `projects/${node.project.id}`;
-    await vscode.env.openExternal(
-      vscode.Uri.parse(/^https?:/.test(String(target)) ? String(target) : active.client.webUrl(String(target))),
+          ? active.client.appUrl({ projectId: node.project.id, todolistId: node.todolist.id })
+          : (node.task.url ??
+            active.client.appUrl({ projectId: node.project.id, todolistId: node.todolist.id }));
+    await vscode.env.openExternal(vscode.Uri.parse(url));
+  });
+
+  command("proofhub.changeAccount", async () => {
+    const created = await connect(context, { askAccount: true });
+    if (created) {
+      session = created;
+      provider.setSession(session);
+    }
+  });
+
+  command("proofhub.openUrl", async () => {
+    const active = await requireSession();
+    if (!active) {
+      return;
+    }
+    const clipboard = (await vscode.env.clipboard.readText()).trim();
+    const input = await vscode.window.showInputBox({
+      title: "Open a ProofHub link",
+      prompt: "Paste a ProofHub URL to reveal it in the tree",
+      value: parseAppUrl(clipboard) ? clipboard : "",
+      ignoreFocusOut: true,
+      validateInput: (value) =>
+        !value.trim() || parseAppUrl(value) ? undefined : "That is not a ProofHub link",
+    });
+    if (!input) {
+      return;
+    }
+    const location = parseAppUrl(input);
+    if (!location) {
+      return;
+    }
+    if (location.host !== active.client.accountHost) {
+      vscode.window.showWarningMessage(
+        `That link belongs to ${location.host}, but you are connected to ${active.client.accountHost}.`,
+      );
+      return;
+    }
+
+    await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: "Looking up the link" },
+      async () => {
+        const projects = await active.client.projects(true);
+        const project = projects.find((candidate) => idMatches(candidate.id, location.projectId));
+        if (!project) {
+          vscode.window.showWarningMessage("That project is not visible with your key.");
+          return;
+        }
+        if (!location.todolistId) {
+          await view.reveal({ kind: "project", project }, { expand: true });
+          return;
+        }
+        const todolists = await active.client.todolists(project.id);
+        const todolist = todolists.find((candidate) => idMatches(candidate.id, location.todolistId!));
+        if (!todolist) {
+          await view.reveal({ kind: "project", project }, { expand: true });
+          return;
+        }
+        await view.reveal({ kind: "todolist", project, todolist }, { expand: true, select: true });
+      },
     );
   });
 
@@ -206,33 +266,60 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!active) {
       return;
     }
-    const me = await active.client.me();
-    const projects = await active.client.projects(false);
-    const mine: { label: string; description: string; node: Node }[] = [];
+    const mine = await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Collecting your open tasks",
+        cancellable: true,
+      },
+      async (progress, token) => {
+        const me = await active.client.me();
+        const projects = await active.client.projects(false);
+        const found: { label: string; description: string; node: Node }[] = [];
 
-    for (const project of projects) {
-      for (const todolist of await active.client.todolists(project.id)) {
-        for (const task of await active.client.tasks(project.id, todolist.id)) {
-          if (!task.completed && task.assigned?.includes(me.id)) {
-            mine.push({
-              label: task.title,
-              description: `${project.title} › ${todolist.title}`,
-              node: { kind: "task", project, todolist, task },
-            });
+        for (const [index, project] of projects.entries()) {
+          if (token.isCancellationRequested) {
+            break;
+          }
+          progress.report({
+            message: `${project.title} (${index + 1}/${projects.length})`,
+            increment: 100 / Math.max(projects.length, 1),
+          });
+          for (const todolist of await active.client.todolists(project.id)) {
+            if (token.isCancellationRequested) {
+              break;
+            }
+            for (const task of await active.client.tasks(project.id, todolist.id)) {
+              if (!task.completed && task.assigned?.includes(me.id)) {
+                found.push({
+                  label: task.title,
+                  description: `${project.title} › ${todolist.title}`,
+                  node: { kind: "task", project, todolist, task },
+                });
+              }
+            }
           }
         }
-      }
-    }
+        return found;
+      },
+    );
 
     if (mine.length === 0) {
       vscode.window.showInformationMessage("No open tasks assigned to you.");
       return;
     }
-    const picked = await vscode.window.showQuickPick(mine, { title: "My open tasks" });
+    const picked = await vscode.window.showQuickPick(mine, {
+      title: `Your open tasks (${mine.length})`,
+      matchOnDescription: true,
+    });
     if (picked) {
       await vscode.commands.executeCommand("proofhub.openInBrowser", picked.node);
     }
   });
+}
+
+function idMatches(candidate: string, wanted: string): boolean {
+  return String(candidate).replace(/^\D+-/, "") === String(wanted).replace(/^\D+-/, "");
 }
 
 async function logTimeFor(
