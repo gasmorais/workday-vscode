@@ -636,24 +636,32 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   });
   context.subscriptions.push(teamsView);
 
-  const useTeams = async (interactive: boolean): Promise<boolean> => {
+  const useTeams = async (interactive: boolean): Promise<string | undefined> => {
     const token = await teamsAuth.token({ interactive });
     if (!token) {
-      return false;
+      return undefined;
     }
-    graph = new GraphClient({ token: () => teamsAuth.token() });
-    const me = await graph.me().catch(() => undefined);
-    teamsMe = me?.id;
-    teamsProvider.setClient(graph, teamsMe);
+    const client = new GraphClient({ token: () => teamsAuth.token() });
+    const me = await client.me();
+    graph = client;
+    teamsMe = me.id;
+    teamsProvider.setClient(client, teamsMe);
     await vscode.commands.executeCommand("setContext", "proofhub.teamsConnected", true);
-    return Boolean(me);
+    return me.displayName ?? "";
   };
 
   command("proofhub.teams.connect", async () => {
-    if (await useTeams(true)) {
-      const me = await graph?.me().catch(() => undefined);
-      vscode.window.showInformationMessage(t.teams.connected(me?.displayName ?? ""));
+    try {
+      const name = await useTeams(true);
+      if (name === undefined) {
+        return;
+      }
+      vscode.window.showInformationMessage(t.teams.connected(name));
       await callWatch.start();
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        t.teams.connectFailed(error instanceof Error ? error.message : String(error)),
+      );
     }
   });
 
@@ -757,9 +765,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     detail.refreshIfShowing(node.task.id);
   });
 
-  if (await useTeams(false)) {
-    await callWatch.start();
-  }
+  void useTeams(false)
+    .then(async (name) => {
+      if (name !== undefined) {
+        await callWatch.start();
+      }
+    })
+    .catch(() => undefined);
 }
 
 async function moveViewToRight(): Promise<void> {

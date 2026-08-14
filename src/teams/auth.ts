@@ -76,8 +76,9 @@ export class TeamsAuth {
   }
 
   private async fromVsCode(interactive: boolean): Promise<string | undefined> {
+    const scopes = GRAPH_SCOPES.filter((scope) => scope !== "offline_access");
     try {
-      const session = await vscode.authentication.getSession("microsoft", [...GRAPH_SCOPES], {
+      const session = await vscode.authentication.getSession("microsoft", scopes, {
         createIfNone: interactive,
         silent: interactive ? undefined : true,
       });
@@ -86,7 +87,10 @@ export class TeamsAuth {
       }
       this.cached = { token: session.accessToken, until: Date.now() + 45 * 60_000 };
       return session.accessToken;
-    } catch {
+    } catch (error) {
+      if (interactive) {
+        throw error;
+      }
       return undefined;
     }
   }
