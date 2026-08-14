@@ -214,6 +214,7 @@ export const en: Strings = {
       `Nobody is assigned to ${kind}, so it shows up in no one's queue.`,
   },
   teams: {
+    localMissing: "Install the extension dependencies to connect to the local Teams client.",
     title: "Teams",
     connect: "Connect to Teams",
     connected: (name: string) => `Teams connected as ${name}.`,

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import WebSocket from "ws";
+import type WebSocket from "ws";
 import {
   CONFIG_SECTION,
   SECRET_TEAMS_LOCAL,
@@ -7,12 +7,30 @@ import {
   TEAMS_LOCAL_PROTOCOL,
   TEAMS_RECONNECT_MS,
 } from "../constants.js";
+import { t } from "../locales/index.js";
 import type { MeetingState } from "./call-tracker.js";
 
 interface Envelope {
   meetingUpdate?: { meetingState?: MeetingState };
   tokenRefresh?: string;
   errorMsg?: string;
+}
+
+type SocketClass = new (url: string) => WebSocket;
+
+let loaded: SocketClass | null | undefined;
+
+function socketClass(): SocketClass | undefined {
+  if (loaded === undefined) {
+    try {
+      loaded =
+        (require("ws") as { default?: SocketClass } & SocketClass).default ??
+        (require("ws") as SocketClass);
+    } catch {
+      loaded = null;
+    }
+  }
+  return loaded ?? undefined;
 }
 
 export class TeamsLocalApi {
@@ -28,7 +46,7 @@ export class TeamsLocalApi {
   constructor(private readonly context: vscode.ExtensionContext) {}
 
   get connected(): boolean {
-    return this.socket?.readyState === WebSocket.OPEN;
+    return this.socket?.readyState === 1;
   }
 
   async start(): Promise<void> {
@@ -73,7 +91,13 @@ export class TeamsLocalApi {
     if (this.stopped || this.connected) {
       return;
     }
-    const socket = new WebSocket(await this.url());
+    const Socket = socketClass();
+    if (!Socket) {
+      this.stopped = true;
+      this.failures.fire(t.teams.localMissing);
+      return;
+    }
+    const socket = new Socket(await this.url());
     this.socket = socket;
 
     socket.on("message", (raw) => {

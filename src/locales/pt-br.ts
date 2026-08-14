@@ -213,6 +213,7 @@ export const ptBR = {
       `Ninguém está atribuído a ${kind}, então ela não aparece na fila de nenhuma pessoa.`,
   },
   teams: {
+    localMissing: "Instale as dependencias da extensao para ligar ao Teams local.",
     title: "Teams",
     connect: "Conectar no Teams",
     connected: (name: string) => `Teams conectado como ${name}.`,

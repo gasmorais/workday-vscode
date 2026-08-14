@@ -2,5 +2,6 @@
 src/**
 test/**
 node_modules/**
+!node_modules/ws/**
 tsconfig.json
 *.map
