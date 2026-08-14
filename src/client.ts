@@ -1,4 +1,10 @@
-import { API_PATH } from "./constants.js";
+import { t } from "./locales/index.js";
+import {
+  API_PATH,
+  REQUEST_TIMEOUT_SECONDS,
+  RETRY_ATTEMPTS,
+  RETRY_BACKOFF_MS,
+} from "./constants.js";
 import { RateLimiter } from "./rate-limit.js";
 import { appPath, type Location } from "./urls.js";
 import type {
@@ -37,6 +43,7 @@ export interface ClientOptions {
   limiter?: RateLimiter;
   sleep?: (ms: number) => Promise<void>;
   maxRetries?: number;
+  timeoutMs?: number;
 }
 
 export function normalizeAccount(input: string): string {
@@ -64,6 +71,7 @@ export class ProofHubClient {
   private readonly limiter: RateLimiter;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly maxRetries: number;
+  private readonly timeoutMs: number;
   private readonly userAgent: string;
 
   constructor(private readonly options: ClientOptions) {
@@ -71,7 +79,8 @@ export class ProofHubClient {
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.limiter = options.limiter ?? new RateLimiter({ sleep: options.sleep });
     this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
-    this.maxRetries = options.maxRetries ?? 3;
+    this.maxRetries = options.maxRetries ?? RETRY_ATTEMPTS;
+    this.timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_SECONDS * 1000;
     const contact = options.contactEmail?.trim();
     this.userAgent = contact ? `VSCode-ProofHub (${contact})` : "VSCode-ProofHub";
   }
@@ -109,17 +118,32 @@ export class ProofHubClient {
 
     for (let attempt = 0; ; attempt++) {
       await this.limiter.acquire();
-      const response = await this.fetchImpl(url, {
-        method,
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
+      let response: Response;
+      try {
+        response = await this.fetchImpl(url, {
+          method,
+          headers,
+          body: body === undefined ? undefined : JSON.stringify(body),
+          signal: this.timeoutSignal(),
+        });
+      } catch (error) {
+        if (attempt < this.maxRetries && isRetriableFailure(error)) {
+          await this.sleep(RETRY_BACKOFF_MS * 2 ** attempt);
+          continue;
+        }
+        throw new ProofHubError(reachFailure(error), 0, path);
+      }
 
       if (response.status === 429 && attempt < this.maxRetries) {
         const retryAfter = Number(response.headers.get("Retry-After") ?? "1");
         const waitMs = Number.isFinite(retryAfter) ? Math.max(retryAfter, 1) * 1000 : 1000;
         this.limiter.pauseFor(waitMs);
         await this.sleep(waitMs);
+        continue;
+      }
+
+      if (response.status >= 500 && attempt < this.maxRetries) {
+        await this.sleep(RETRY_BACKOFF_MS * 2 ** attempt);
         continue;
       }
 
@@ -132,6 +156,12 @@ export class ProofHubClient {
       }
       return (await response.json()) as T;
     }
+  }
+
+  private timeoutSignal(): AbortSignal | undefined {
+    return this.timeoutMs > 0 && typeof AbortSignal?.timeout === "function"
+      ? AbortSignal.timeout(this.timeoutMs)
+      : undefined;
   }
 
   me(): Promise<Person> {
@@ -317,4 +347,13 @@ async function describe(response: Response): Promise<string> {
   } catch {
     return fallback;
   }
+}
+
+function isRetriableFailure(error: unknown): boolean {
+  return !(error instanceof Error) || error.name !== "AbortError";
+}
+
+function reachFailure(error: unknown): string {
+  const reason = error instanceof Error ? error.message : String(error);
+  return t.connect.unreachable(reason);
 }

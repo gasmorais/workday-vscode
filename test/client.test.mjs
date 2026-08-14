@@ -150,3 +150,56 @@ test("uma lista que não vem como array não derruba a extensão", () => {
   assert.deepEqual(asArray(null), []);
   assert.deepEqual(asArray("erro"), []);
 });
+
+test("uma falha de rede é tentada de novo antes de virar erro", async () => {
+  let calls = 0;
+  const client = new ProofHubClient({
+    account: "acme.proofhub.com",
+    apiKey: "k",
+    sleep: () => Promise.resolve(),
+    fetchImpl: async () => {
+      calls += 1;
+      if (calls < 3) {
+        throw new TypeError("fetch failed");
+      }
+      return new Response(JSON.stringify([{ id: 1, title: "Um" }]), { status: 200 });
+    },
+  });
+  const projects = await client.projects(false);
+  assert.equal(calls, 3);
+  assert.equal(projects.length, 1);
+});
+
+test("erro de servidor também é tentado de novo", async () => {
+  let calls = 0;
+  const client = new ProofHubClient({
+    account: "acme.proofhub.com",
+    apiKey: "k",
+    sleep: () => Promise.resolve(),
+    fetchImpl: async () => {
+      calls += 1;
+      return calls < 2
+        ? new Response("boom", { status: 503 })
+        : new Response("[]", { status: 200 });
+    },
+  });
+  await client.projects(false);
+  assert.equal(calls, 2);
+});
+
+test("rede fora vira uma mensagem que fala de conexão", async () => {
+  const client = new ProofHubClient({
+    account: "acme.proofhub.com",
+    apiKey: "k",
+    maxRetries: 0,
+    sleep: () => Promise.resolve(),
+    fetchImpl: async () => {
+      throw new TypeError("fetch failed");
+    },
+  });
+  await assert.rejects(client.projects(false), (error) => {
+    assert.equal(error.status, 0);
+    assert.ok(error.message.includes("conexão"));
+    return true;
+  });
+});

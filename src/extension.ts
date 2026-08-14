@@ -12,7 +12,7 @@ import { TaskDetail, type TimerTarget } from "./detail.js";
 import { ReportPanel } from "./report-panel.js";
 import { createTask as runCreateTask } from "./flows/create-task.js";
 import { EMPTY_FILTER, isActive, type SortKey } from "./filter.js";
-import { CONFIG_SECTION, HOURS_PATTERN } from "./constants.js";
+import { CONFIG_SECTION, FOCUS_SYNC_DEBOUNCE_MS, HOURS_PATTERN } from "./constants.js";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   useLocale(vscode.env.language);
@@ -122,6 +122,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   });
 
+  let lastSync = 0;
+  const syncNow = () => {
+    lastSync = Date.now();
+    provider.refresh();
+    const open = detail.taskId;
+    if (open) {
+      detail.refreshIfShowing(open);
+    }
+  };
+
   context.subscriptions.push(
     vscode.window.onDidChangeWindowState((state) => {
       if (!state.focused || !session) {
@@ -130,10 +140,57 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (!vscode.workspace.getConfiguration(CONFIG_SECTION).get<boolean>("syncOnFocus", true)) {
         return;
       }
-      provider.refresh();
-      const open = detail.taskId;
-      if (open) {
-        detail.refreshIfShowing(open);
+      if (Date.now() - lastSync < FOCUS_SYNC_DEBOUNCE_MS) {
+        return;
+      }
+      syncNow();
+    }),
+  );
+
+  let autoRefresh: ReturnType<typeof setInterval> | undefined;
+  const scheduleAutoRefresh = () => {
+    if (autoRefresh) {
+      clearInterval(autoRefresh);
+      autoRefresh = undefined;
+    }
+    const minutes = vscode.workspace
+      .getConfiguration(CONFIG_SECTION)
+      .get<number>("autoRefreshMinutes", 0);
+    if (minutes > 0) {
+      autoRefresh = setInterval(() => {
+        if (session && vscode.window.state.focused) {
+          syncNow();
+        }
+      }, minutes * 60_000);
+    }
+  };
+  scheduleAutoRefresh();
+  context.subscriptions.push({
+    dispose: () => {
+      if (autoRefresh) {
+        clearInterval(autoRefresh);
+      }
+    },
+  });
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration(async (event) => {
+      if (!event.affectsConfiguration(CONFIG_SECTION)) {
+        return;
+      }
+      if (event.affectsConfiguration(`${CONFIG_SECTION}.autoRefreshMinutes`)) {
+        scheduleAutoRefresh();
+      }
+      if (
+        event.affectsConfiguration(`${CONFIG_SECTION}.account`) ||
+        event.affectsConfiguration(`${CONFIG_SECTION}.contactEmail`)
+      ) {
+        session = await restoreSession(context);
+        provider.setSession(session);
+        return;
+      }
+      if (event.affectsConfiguration(`${CONFIG_SECTION}.archivedProjects`)) {
+        provider.refresh();
       }
     }),
   );

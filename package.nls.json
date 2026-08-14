@@ -28,5 +28,7 @@
   "config.apiPagePath": "Path of the API access page opened by the Connect command. Adjust it if ProofHub changes the address.",
   "config.openOnRight": "Move the ProofHub panel to the right sidebar the first time it opens.",
   "config.syncOnFocus": "Reload projects and the open task whenever the VS Code window regains focus.",
-  "config.dailyGoal": "Daily hours goal, in the H:MM format. It becomes the reference line of the days chart."
+  "config.dailyGoal": "Daily hours goal, in the H:MM format. It becomes the reference line of the days chart.",
+  "config.cacheSeconds": "How long the tree keeps projects, lists and tasks before asking ProofHub again. Zero always asks.",
+  "config.autoRefreshMinutes": "Refresh the tree every so many minutes while the window has focus. Zero turns it off."
 }

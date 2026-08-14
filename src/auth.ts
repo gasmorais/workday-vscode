@@ -4,7 +4,12 @@ import { personName, type Person } from "./types.js";
 import { watchClipboardForKey } from "./key-watch.js";
 import { verifyKey } from "./me.js";
 import { t } from "./locales/index.js";
-import { ACCOUNT_PLACEHOLDER, CONFIG_SECTION, SECRET_PREFIX } from "./constants.js";
+import {
+  ACCOUNT_PLACEHOLDER,
+  CONFIG_SECTION,
+  SECRET_PREFIX,
+  STATE_LAST_ACCOUNT,
+} from "./constants.js";
 
 export interface Session {
   account: string;
@@ -31,13 +36,15 @@ function buildClient(account: string, apiKey: string): ProofHubClient {
 export async function restoreSession(
   context: vscode.ExtensionContext,
 ): Promise<Session | undefined> {
-  const configured = settings().get<string>("account")?.trim();
-  if (!configured) {
+  const remembered =
+    settings().get<string>("account")?.trim() ||
+    context.globalState.get<string>(STATE_LAST_ACCOUNT)?.trim();
+  if (!remembered) {
     return undefined;
   }
   let account: string;
   try {
-    account = normalizeAccount(configured);
+    account = normalizeAccount(remembered);
   } catch {
     return undefined;
   }
@@ -50,7 +57,7 @@ export async function restoreSession(
 
 export async function connect(
   context: vscode.ExtensionContext,
-  options: { askAccount?: boolean } = {},
+  options: { askAccount?: boolean; forceNewKey?: boolean } = {},
 ): Promise<Session | undefined> {
   const configured = settings().get<string>("account")?.trim() ?? "";
   let account: string;
@@ -77,6 +84,25 @@ export async function connect(
     account = normalizeAccount(answer);
   } else {
     account = normalizeAccount(configured);
+  }
+
+  const stored = await context.secrets.get(secretKey(account));
+  if (stored && !options.forceNewKey) {
+    try {
+      const known = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: t.connect.checking(account) },
+        () => verifyKey(buildClient(account, stored)),
+      );
+      await remember(context, account, known);
+      vscode.window.showInformationMessage(
+        known ? t.connect.connectedAs(personName(known)) : t.connect.connected,
+      );
+      return { account, apiKey: stored, client: buildClient(account, stored) };
+    } catch (error) {
+      if (!(error instanceof ProofHubError) || !error.isAuthFailure) {
+        vscode.window.showWarningMessage(describeFailure(error));
+      }
+    }
   }
 
   const proceed = await vscode.window.showInformationMessage(
@@ -173,15 +199,26 @@ export async function connect(
   }
 
   await context.secrets.store(secretKey(account), apiKey);
-  await settings().update("account", account, vscode.ConfigurationTarget.Global);
-  if (!settings().get<string>("contactEmail")?.trim() && person?.email) {
-    await settings().update("contactEmail", person.email, vscode.ConfigurationTarget.Global);
-  }
+  await remember(context, account, person);
 
   vscode.window.showInformationMessage(
     person ? t.connect.connectedAs(personName(person)) : t.connect.connected,
   );
   return { account, apiKey, client: buildClient(account, apiKey) };
+}
+
+async function remember(
+  context: vscode.ExtensionContext,
+  account: string,
+  person: Person | undefined,
+): Promise<void> {
+  await context.globalState.update(STATE_LAST_ACCOUNT, account);
+  if (settings().get<string>("account")?.trim() !== account) {
+    await settings().update("account", account, vscode.ConfigurationTarget.Global);
+  }
+  if (!settings().get<string>("contactEmail")?.trim() && person?.email) {
+    await settings().update("contactEmail", person.email, vscode.ConfigurationTarget.Global);
+  }
 }
 
 export function apiPageUrl(account: string): string {
@@ -190,10 +227,13 @@ export function apiPageUrl(account: string): string {
 }
 
 export async function disconnect(context: vscode.ExtensionContext): Promise<void> {
-  const configured = settings().get<string>("account")?.trim();
+  const configured =
+    settings().get<string>("account")?.trim() ||
+    context.globalState.get<string>(STATE_LAST_ACCOUNT)?.trim();
   if (configured) {
     await context.secrets.delete(secretKey(normalizeAccount(configured)));
   }
+  await context.globalState.update(STATE_LAST_ACCOUNT, undefined);
   vscode.window.showInformationMessage(t.connect.removed);
 }
 

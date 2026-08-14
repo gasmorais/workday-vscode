@@ -28,5 +28,7 @@
   "config.apiPagePath": "Caminho da página de acesso à API, aberta pelo comando Conectar. Ajuste se o ProofHub mudar o endereço.",
   "config.openOnRight": "Mover o painel do ProofHub para a barra lateral direita na primeira vez que ele abre.",
   "config.syncOnFocus": "Recarregar projetos e a tarefa aberta sempre que a janela do VS Code voltar ao foco.",
-  "config.dailyGoal": "Meta diária de horas, no formato H:MM. Vira a linha de referência do gráfico de dias."
+  "config.dailyGoal": "Meta diária de horas, no formato H:MM. Vira a linha de referência do gráfico de dias.",
+  "config.cacheSeconds": "Por quanto tempo a árvore guarda projetos, listas e tarefas antes de perguntar de novo ao ProofHub. Zero sempre pergunta.",
+  "config.autoRefreshMinutes": "Atualizar a árvore a cada tantos minutos enquanto a janela estiver em foco. Zero desliga."
 }

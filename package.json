@@ -252,6 +252,18 @@
           "type": "string",
           "default": "8:00",
           "description": "%config.dailyGoal%"
+        },
+        "proofhub.cacheSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "description": "%config.cacheSeconds%"
+        },
+        "proofhub.autoRefreshMinutes": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "%config.autoRefreshMinutes%"
         }
       }
     }

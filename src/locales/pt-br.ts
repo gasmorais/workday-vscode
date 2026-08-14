@@ -39,6 +39,8 @@ export const ptBR = {
     connected: "ProofHub conectado.",
     removed: "Chave do ProofHub removida desta máquina.",
     rejected: "O ProofHub recusou a chave. Rode ProofHub: Conectar para informar outra.",
+    unreachable: (reason: string) =>
+      `Não deu para falar com o ProofHub: ${reason}. Confira sua conexão e tente de novo.`,
     failure: (status: number, message: string) => `Erro ${status} do ProofHub: ${message}`,
   },
   me: {

@@ -7,7 +7,7 @@ import { applyFilter, EMPTY_FILTER, sortTasks, type SortKey, type TaskFilter } f
 import { firstLine } from "./html.js";
 import { formatMinutes, toDate } from "./format.js";
 import { t } from "./locales/index.js";
-import { CONFIG_SECTION, TREE_CACHE_MS } from "./constants.js";
+import { CONFIG_SECTION, TREE_CACHE_SECONDS } from "./constants.js";
 
 export type Node =
   | { kind: "project"; project: Project }
@@ -68,12 +68,19 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
     this.changed.fire(undefined);
   }
 
+  private cacheMs(): number {
+    const seconds = vscode.workspace
+      .getConfiguration(CONFIG_SECTION)
+      .get<number>("cacheSeconds", TREE_CACHE_SECONDS);
+    return Math.max(0, seconds) * 1000;
+  }
+
   private fresh(key: string): Node[] | undefined {
     const hit = this.cache.get(key);
     if (!hit) {
       return undefined;
     }
-    if (this.now() - hit.at > TREE_CACHE_MS) {
+    if (this.now() - hit.at > this.cacheMs()) {
       this.cache.delete(key);
       return undefined;
     }

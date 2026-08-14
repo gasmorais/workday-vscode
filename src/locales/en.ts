@@ -41,6 +41,8 @@ export const en: Strings = {
     connected: "ProofHub connected.",
     removed: "ProofHub key removed from this machine.",
     rejected: "ProofHub rejected the key. Run ProofHub: Connect to provide another one.",
+    unreachable: (reason: string) =>
+      `Could not reach ProofHub: ${reason}. Check your connection and try again.`,
     failure: (status: number, message: string) => `ProofHub error ${status}: ${message}`,
   },
   me: {
