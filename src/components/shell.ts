@@ -41,6 +41,9 @@ form input[name=title], form input[name=description], form textarea { flex: 1; m
 .prose a { color: var(--vscode-textLink-foreground); }
 .prose code { background: var(--vscode-textCodeBlock-background); padding: 1px 4px; border-radius: 2px; }
 .prose blockquote { margin: 0 0 8px; padding-left: 10px; border-left: 2px solid var(--vscode-panel-border); opacity: .85; }
+.as-link { background: none; color: var(--vscode-textLink-foreground); padding: 0; text-align: left; }
+.as-link:hover { background: none; text-decoration: underline; }
+.as-link.done { text-decoration: line-through; opacity: .6; color: var(--vscode-foreground); }
 .empty { opacity: .6; font-style: italic; margin: 8px 0; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 8px; margin-top: 14px; }
 .card { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 10px; display: flex; flex-direction: column; gap: 2px; }
@@ -76,7 +79,7 @@ const SCRIPT = `
 const vs = acquireVsCodeApi();
 document.addEventListener('click', (e) => {
   const target = e.target.closest('button[data-act]');
-  if (target) { vs.postMessage({ act: target.dataset.act }); }
+  if (target) { vs.postMessage({ act: target.dataset.act, id: target.dataset.id }); }
 });
 document.addEventListener('change', (e) => {
   const box = e.target.closest('input[data-subtask]');

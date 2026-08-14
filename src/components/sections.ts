@@ -2,7 +2,7 @@ import { escapeHtml, richText } from "../html.js";
 import { t } from "../strings.js";
 import { estimateOf as estimateMinutes, minutesOf, type Comment, type Subtask, type Task, type TimeEntry } from "../types.js";
 import { formatMinutes, formatWhen } from "../format.js";
-import { button, chip, empty, field, form, list, section } from "./ui.js";
+import { button, chip, empty, field, form, linkButton, list, section } from "./ui.js";
 
 export interface TaskView {
   projectTitle: string;
@@ -13,6 +13,8 @@ export interface TaskView {
   comments: (Comment & { authorName?: string })[];
   time: TimeEntry[];
   timerRunning: boolean;
+  isSubtask?: boolean;
+  parentTitle?: string;
   problems?: { subtasks?: string; comments?: string; time?: string };
 }
 
@@ -27,9 +29,16 @@ export function header(view: TaskView): string {
     button("open", t.detail.openBrowser),
     button("refresh", t.detail.refresh),
   ];
+  if (view.isSubtask) {
+    actions.unshift(button("back", t.detail.back));
+  }
+  const crumbs = [view.projectTitle, view.todolistTitle, view.parentTitle]
+    .filter(Boolean)
+    .map((part) => escapeHtml(part as string))
+    .join(" › ");
   return [
     "<header>",
-    `<p class="crumbs">${escapeHtml(view.projectTitle)} › ${escapeHtml(view.todolistTitle)}</p>`,
+    `<p class="crumbs">${crumbs}</p>`,
     `<h1 class="${done ? "done" : ""}">${escapeHtml(view.task.title)}</h1>`,
     `<p class="meta">${chips(view)}</p>`,
     `<p class="actions">${actions.join("")}</p>`,
@@ -49,6 +58,10 @@ function chips(view: TaskView): string {
   const estimate = estimateOf(view.task);
   if (estimate) {
     parts.push(chip(t.detail.estimate(estimate)));
+  }
+  const logged = minutesOf(view.task);
+  if (logged > 0) {
+    parts.push(chip(t.detail.logged(formatMinutes(logged))));
   }
   return parts.join("");
 }
@@ -70,11 +83,15 @@ export function description(task: Task): string {
 export function subtasks(items: Subtask[], problem?: string): string {
   const rows = items.map(
     (item) =>
-      `<li><label><input type="checkbox" data-subtask="${escapeHtml(item.id)}"${
+      `<li><input type="checkbox" data-subtask="${escapeHtml(item.id)}"${
         item.completed ? " checked" : ""
-      }><span class="${item.completed ? "done" : ""}">${escapeHtml(item.title)}</span></label>${
+      }><span class="grow">${linkButton(
+        "openSubtask",
+        item.title,
+        String(item.id),
+      ).replace('class="as-link"', `class="as-link${item.completed ? " done" : ""}"`)}</span>${
         item.due_date ? chip(item.due_date) : ""
-      }</li>`,
+      }${item.assigned?.length ? chip(t.tree.people(item.assigned.length)) : ""}</li>`,
   );
   const done = items.filter((item) => item.completed).length;
   return section(
@@ -141,7 +158,7 @@ export function renderBody(view: TaskView): string {
   return [
     header(view),
     description(view.task),
-    subtasks(view.subtasks, view.problems?.subtasks),
+    view.isSubtask ? "" : subtasks(view.subtasks, view.problems?.subtasks),
     time(view.time, view.problems?.time),
     comments(view.comments, view.problems?.comments),
   ].join("\n");

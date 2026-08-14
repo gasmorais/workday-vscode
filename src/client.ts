@@ -88,6 +88,10 @@ export class ProofHubClient {
     return this.webUrl(appPath(location));
   }
 
+  async list<T>(method: string, path: string, body?: unknown): Promise<T[]> {
+    return asArray<T>(await this.request<unknown>(method, path, body));
+  }
+
   async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${this.baseUrl}/${path.replace(/^\//, "")}`;
     const headers: Record<string, string> = {
@@ -132,19 +136,19 @@ export class ProofHubClient {
 
   projects(includeArchived = false): Promise<Project[]> {
     const query = includeArchived ? "?archived=1" : "";
-    return this.request<Project[]>("GET", `projects${query}`);
+    return this.list<Project>("GET", `projects${query}`);
   }
 
   people(): Promise<Person[]> {
-    return this.request<Person[]>("GET", "people");
+    return this.list<Person>("GET", "people");
   }
 
   todolists(projectId: Id): Promise<Todolist[]> {
-    return this.request<Todolist[]>("GET", `projects/${projectId}/todolists`);
+    return this.list<Todolist>("GET", `projects/${projectId}/todolists`);
   }
 
   tasks(projectId: Id, todolistId: Id): Promise<Task[]> {
-    return this.request<Task[]>("GET", `projects/${projectId}/todolists/${todolistId}/tasks`);
+    return this.list<Task>("GET", `projects/${projectId}/todolists/${todolistId}/tasks`);
   }
 
   createTask(projectId: Id, todolistId: Id, task: Partial<Task>): Promise<Task> {
@@ -169,7 +173,7 @@ export class ProofHubClient {
   }
 
   comments(projectId: Id, todolistId: Id, taskId: Id): Promise<Comment[]> {
-    return this.request<Comment[]>(
+    return this.list<Comment>(
       "GET",
       `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/comments`,
     );
@@ -191,10 +195,57 @@ export class ProofHubClient {
   }
 
   subtasks(projectId: Id, todolistId: Id, taskId: Id): Promise<Subtask[]> {
-    return this.request<Subtask[]>(
+    return this.list<Subtask>(
       "GET",
       `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/subtasks`,
     );
+  }
+
+  subtask(projectId: Id, todolistId: Id, taskId: Id, subtaskId: Id): Promise<Subtask> {
+    return this.request<Subtask>(
+      "GET",
+      `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/subtasks/${subtaskId}`,
+    );
+  }
+
+  async subtaskComments(
+    projectId: Id,
+    todolistId: Id,
+    taskId: Id,
+    subtaskId: Id,
+  ): Promise<Comment[]> {
+    try {
+      return await this.list<Comment>(
+        "GET",
+        `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/subtasks/${subtaskId}/comments`,
+      );
+    } catch (error) {
+      if (error instanceof ProofHubError && error.status === 404) {
+        return this.comments(projectId, todolistId, subtaskId);
+      }
+      throw error;
+    }
+  }
+
+  async addSubtaskComment(
+    projectId: Id,
+    todolistId: Id,
+    taskId: Id,
+    subtaskId: Id,
+    description: string,
+  ): Promise<Comment> {
+    try {
+      return await this.request<Comment>(
+        "POST",
+        `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/subtasks/${subtaskId}/comments`,
+        { description },
+      );
+    } catch (error) {
+      if (error instanceof ProofHubError && error.status === 404) {
+        return this.addComment(projectId, todolistId, subtaskId, description);
+      }
+      throw error;
+    }
   }
 
   createSubtask(
@@ -225,11 +276,11 @@ export class ProofHubClient {
   }
 
   timeEntries(projectId: Id, timesheetId: Id): Promise<TimeEntry[]> {
-    return this.request<TimeEntry[]>("GET", `projects/${projectId}/timesheets/${timesheetId}/time`);
+    return this.list<TimeEntry>("GET", `projects/${projectId}/timesheets/${timesheetId}/time`);
   }
 
   timesheets(projectId: Id): Promise<Timesheet[]> {
-    return this.request<Timesheet[]>("GET", `projects/${projectId}/timesheets`);
+    return this.list<Timesheet>("GET", `projects/${projectId}/timesheets`);
   }
 
   logTime(entry: NewTimeEntry): Promise<TimeEntry> {
@@ -239,6 +290,20 @@ export class ProofHubClient {
       entry,
     );
   }
+}
+
+export function asArray<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) {
+    return payload as T[];
+  }
+  if (payload && typeof payload === "object") {
+    const values = Object.values(payload as Record<string, unknown>);
+    const nested = values.find((value) => Array.isArray(value));
+    if (nested) {
+      return nested as T[];
+    }
+  }
+  return [];
 }
 
 async function describe(response: Response): Promise<string> {

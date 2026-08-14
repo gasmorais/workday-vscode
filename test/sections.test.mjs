@@ -44,6 +44,37 @@ test("horas somam logged_hours e logged_mins, inclusive quando um deles é nulo"
   assert.ok(html.includes(">2:45<"));
 });
 
+test("a subtarefa é clicável e leva o próprio identificador", () => {
+  const html = renderBody({
+    ...base,
+    subtasks: [
+      { id: 13966722, title: "Subir o build", assigned: [1, 2], due_date: "2026-08-20" },
+      { id: 13966723, title: "Feito", completed: true },
+    ],
+  });
+  assert.ok(html.includes('data-act="openSubtask" data-id="13966722"'));
+  assert.ok(html.includes("2 responsáveis"));
+  assert.ok(html.includes("as-link done"));
+});
+
+test("dentro da subtarefa some a lista de subtarefas e aparece o voltar", () => {
+  const html = renderBody({
+    ...base,
+    isSubtask: true,
+    parentTitle: "Ajustar login",
+    task: { id: 13966722, title: "Subir o build" },
+  });
+  assert.ok(html.includes('data-act="back"'));
+  assert.ok(html.includes("Ajustar login"));
+  assert.ok(!html.includes("Nova subtarefa"));
+  assert.ok(html.includes("Comentários"));
+});
+
+test("o tempo já lançado aparece como etiqueta no cabeçalho", () => {
+  const html = renderBody({ ...base, task: { ...base.task, logged_hours: 3, logged_mins: 20 } });
+  assert.ok(html.includes("lançado 3:20"));
+});
+
 test("seção que falhou explica o motivo em vez de fingir que está vazia", () => {
   const html = renderBody({ ...base, problems: { subtasks: "Erro 403 do ProofHub: sem acesso" } });
   assert.ok(html.includes("Não deu para carregar esta parte"));

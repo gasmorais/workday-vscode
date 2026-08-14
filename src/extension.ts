@@ -8,7 +8,7 @@ import { sameId, type Id } from "./types.js";
 import { resolveMe } from "./me.js";
 import { parseAppUrl } from "./urls.js";
 import { t } from "./strings.js";
-import { TaskDetail } from "./detail.js";
+import { TaskDetail, type TimerTarget } from "./detail.js";
 import { ReportPanel } from "./report-panel.js";
 import { createTask as runCreateTask } from "./flows/create-task.js";
 import { EMPTY_FILTER, isActive, type SortKey } from "./filter.js";
@@ -25,9 +25,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const detail = new TaskDetail({
     session: () => session,
     onChanged: (node) => provider.refresh(provider.getParent(node)),
-    timerRunsOn: (taskId) => sameId(timer.running?.taskId, taskId),
-    startTimer: (node) => vscode.commands.executeCommand("proofhub.startTimer", node),
-    stopTimer: () => vscode.commands.executeCommand("proofhub.stopTimer"),
+    timerRunsOn: (taskId) => Boolean(timer.on(taskId)),
+    startTimer: (target) => startTimerOn(target),
+    stopTimer: (taskId) => stopTimerOn(taskId),
     openInBrowser: (node) => vscode.commands.executeCommand("proofhub.openInBrowser", node),
   });
 
@@ -341,40 +341,64 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.showInformationMessage(t.task.commentPosted);
   });
 
+  const startTimerOn = async (target: TimerTarget) => {
+    const started = await timer.start({ ...target, startedAt: Date.now() });
+    if (!started) {
+      vscode.window.showInformationMessage(t.time.alreadyOnThis(target.title));
+      return;
+    }
+    detail.refreshIfShowing(target.taskId);
+  };
+
+  const stopTimerOn = async (taskId?: Id) => {
+    const active = await requireSession();
+    if (!active) {
+      return;
+    }
+    const running = timer.all;
+    if (running.length === 0) {
+      vscode.window.showInformationMessage(t.time.notRunning);
+      return;
+    }
+    const chosen =
+      taskId !== undefined
+        ? timer.on(taskId)
+        : running.length === 1
+          ? running[0]
+          : await vscode.window
+              .showQuickPick(
+                running.map((entry) => ({
+                  label: entry.title,
+                  description: formatDuration(Date.now() - entry.startedAt),
+                  entry,
+                })),
+                { title: t.time.pickToStop, ignoreFocusOut: true },
+              )
+              .then((picked) => picked?.entry);
+    if (!chosen) {
+      return;
+    }
+    const hours = formatDuration(Date.now() - chosen.startedAt);
+    await logTimeFor(active, chosen, chosen.title, hours);
+    await timer.stop(chosen.taskId);
+    detail.refreshIfShowing(chosen.taskId);
+  };
+
   command("proofhub.startTimer", async (node: Node) => {
     const active = await requireSession();
     if (!active || node?.kind !== "task") {
       return;
     }
-    const running = timer.running;
-    if (running) {
-      vscode.window.showWarningMessage(t.time.alreadyRunning(running.title));
-      return;
-    }
-    await timer.start({
+    await startTimerOn({
       projectId: node.project.id,
       todolistId: node.todolist.id,
       taskId: node.task.id,
       title: node.task.title,
-      startedAt: Date.now(),
     });
-    detail.refreshIfShowing(node.task.id);
   });
 
-  command("proofhub.stopTimer", async () => {
-    const active = await requireSession();
-    if (!active) {
-      return;
-    }
-    const running = timer.running;
-    if (!running) {
-      vscode.window.showInformationMessage(t.time.notRunning);
-      return;
-    }
-    const hours = formatDuration(Date.now() - running.startedAt);
-    await logTimeFor(active, running, running.title, hours);
-    await timer.stop();
-    detail.refreshIfShowing(running.taskId);
+  command("proofhub.stopTimer", async (taskId?: Id) => {
+    await stopTimerOn(taskId);
   });
 
   command("proofhub.logTime", async (node: Node) => {

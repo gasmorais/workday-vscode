@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { ProofHubClient, ProofHubError, looksLikeKey, normalizeAccount } from "../out/client.js";
+import { asArray, ProofHubClient, ProofHubError, looksLikeKey, normalizeAccount } from "../out/client.js";
 import { RateLimiter } from "../out/rate-limit.js";
 
 function reply(body, init = {}) {
@@ -135,4 +135,12 @@ test("a key from the clipboard is only accepted when it looks like a key", () =>
   assert.equal(looksLikeKey("short"), false);
   assert.equal(looksLikeKey("has spaces in it and is long"), false);
   assert.equal(looksLikeKey("https://acme.proofhub.com/projects"), false);
+});
+
+test("uma lista que não vem como array não derruba a extensão", () => {
+  assert.deepEqual(asArray([1, 2]), [1, 2]);
+  assert.deepEqual(asArray({ tasks: [{ id: 1 }] }), [{ id: 1 }]);
+  assert.deepEqual(asArray({ message: "sem acesso" }), []);
+  assert.deepEqual(asArray(null), []);
+  assert.deepEqual(asArray("erro"), []);
 });

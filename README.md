@@ -30,9 +30,14 @@ Clicar numa tarefa abre o painel **ao lado do código**, não no navegador. Nele
 - ler a descrição já formatada, com listas e links clicáveis;
 - concluir e reabrir;
 - ver subtarefas com o progresso `feitas/total`, marcar cada uma e criar novas;
+- **entrar na subtarefa** clicando no título dela: o painel abre a subtarefa como uma tarefa de verdade, com descrição, responsáveis, prazo, estimativa, horas e comentários próprios, e um botão para voltar;
 - ler a thread de comentários com autor e data, e responder ali mesmo, com `Cmd+Enter` para enviar;
 - ver as horas lançadas com o total somado, e lançar mais;
 - iniciar e parar o cronômetro.
+
+### Cronômetros
+
+Cada tarefa e cada subtarefa tem o seu próprio cronômetro, e todos podem rodar ao mesmo tempo. A barra de status mostra o mais recente com o contador `+N` quando há outros, e o tooltip lista todos com o tempo de cada um. Ao parar, o painel pergunta qual quando há mais de um, e as horas são lançadas no item certo, subtarefa inclusive.
 
 O painel é único: abrir outra tarefa reaproveita a mesma aba.
 
@@ -91,6 +96,8 @@ Os campos seguem a [documentação oficial da API v3](https://github.com/ProofHu
 - os identificadores são **números**, não texto, e a comparação é sempre feita por `sameId`;
 - o texto de um comentário fica em `description`, e o autor em `creator.id`;
 - horas vêm em `logged_hours` e `logged_mins` separados, com a data em `date`, e o lançamento exige `project`, `timesheet_id`, `list_id` e `task_id`;
+- resposta de lista nem sempre chega como array puro, então tudo passa por uma normalização antes de ser percorrido;
+- comentário de subtarefa não está documentado. A extensão tenta a rota aninhada e cai para a rota de tarefa no `404`;
 - não existe endpoint `/me`. A validação da chave cai para `GET /projects` e a identidade é resolvida pelo e-mail de contato ou por uma escolha única na lista de pessoas, guardada na máquina.
 
 Quando uma seção do painel falha, ela diz o motivo em vez de aparecer vazia.

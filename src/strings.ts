@@ -36,6 +36,7 @@ export const t = {
   },
   tree: {
     subtasks: (count: number) => (count === 1 ? "1 subtarefa" : `${count} subtarefas`),
+    people: (count: number) => (count === 1 ? "1 responsável" : `${count} responsáveis`),
   },
   task: {
     newTitle: (list: string) => `Nova tarefa em ${list}`,
@@ -64,6 +65,10 @@ export const t = {
     alreadyRunning: (title: string) => `Já existe um cronômetro rodando em ${title}.`,
     notRunning: "Nenhum cronômetro está rodando.",
     stopHint: "Clique para parar e lançar as horas no ProofHub",
+    stopHintMany: (count: number) => `${count} cronômetros rodando. Clique para escolher qual parar`,
+    pickToStop: "Qual cronômetro parar",
+    alreadyOnThis: (title: string) => `O cronômetro de ${title} já está rodando.`,
+    running: (title: string, elapsed: string) => `${title}, ${elapsed}`,
   },
   mine: {
     collecting: "Reunindo suas tarefas abertas",
@@ -161,5 +166,8 @@ export const t = {
     writeComment: "Escreva um comentário",
     comment: "Comentar",
     sendHint: "Cmd+Enter envia",
+    back: "Voltar para a tarefa",
+    subtaskOf: (title: string) => `subtarefa de ${title}`,
+    logged: (hours: string) => `lançado ${hours}`,
   },
 };

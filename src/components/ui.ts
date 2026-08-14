@@ -13,8 +13,15 @@ export function chip(text: string, tone: "" | "ok" | "open" = ""): string {
   return `<span class="chip ${tone}">${escapeHtml(text)}</span>`;
 }
 
-export function button(action: string, label: string): string {
-  return `<button data-act="${escapeHtml(action)}">${escapeHtml(label)}</button>`;
+export function button(action: string, label: string, id?: string | number): string {
+  const target = id === undefined ? "" : ` data-id="${escapeHtml(id)}"`;
+  return `<button data-act="${escapeHtml(action)}"${target}>${escapeHtml(label)}</button>`;
+}
+
+export function linkButton(action: string, label: string, id: string | number): string {
+  return `<button class="as-link" data-act="${escapeHtml(action)}" data-id="${escapeHtml(
+    id,
+  )}">${escapeHtml(label)}</button>`;
 }
 
 export function list(className: string, items: string[]): string {
