@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { buildReport } from "../out/report.js";
+import { buildReport, compare } from "../out/report.js";
 import { monthLabel, weekKey } from "../out/format.js";
 import { entryTargets } from "../out/types.js";
 
@@ -70,4 +70,58 @@ test("o lançamento é reconhecido pela tarefa e também pela subtarefa", () => 
   assert.deepEqual(entryTargets({ task: { id: 10 }, subtask: { id: 20 } }), [10, 20]);
   assert.deepEqual(entryTargets({ task: null, task_id: 30 }), [30]);
   assert.deepEqual(entryTargets({}), []);
+});
+
+test("a comparação separa uma série por pessoa em cada período", () => {
+  const data = compare(
+    [
+      { id: 1, date: "2026-08-13", logged_hours: 2, authorName: "Ana" },
+      { id: 2, date: "2026-08-13", logged_hours: 1, authorName: "Bruno" },
+      { id: 3, date: "2026-08-14", logged_hours: 3, authorName: "Ana" },
+    ],
+    "day",
+  );
+  assert.deepEqual(data.keys, ["2026-08-13", "2026-08-14"]);
+  assert.deepEqual(
+    data.series.map((row) => row.label),
+    ["Ana", "Bruno"],
+  );
+  assert.deepEqual(data.series[0].values, [120, 180]);
+  assert.deepEqual(data.series[1].values, [60, 0]);
+  assert.deepEqual(data.totals, [180, 180]);
+});
+
+test("a comparação por semana e por mês agrupa os mesmos lançamentos", () => {
+  const entries = [
+    { id: 1, date: "2026-08-03", logged_hours: 1, authorName: "Ana" },
+    { id: 2, date: "2026-08-05", logged_hours: 1, authorName: "Ana" },
+    { id: 3, date: "2026-09-01", logged_hours: 1, authorName: "Ana" },
+  ];
+  assert.equal(compare(entries, "week").keys.length, 2);
+  assert.deepEqual(compare(entries, "month").keys, ["2026-08", "2026-09"]);
+  assert.deepEqual(compare(entries, "month").series[0].values, [120, 60]);
+});
+
+test("a série mais pesada vem primeiro e o pico é o maior período", () => {
+  const data = compare(
+    [
+      { id: 1, date: "2026-08-14", logged_hours: 1, authorName: "Ana" },
+      { id: 2, date: "2026-08-14", logged_hours: 5, authorName: "Bruno" },
+    ],
+    "day",
+  );
+  assert.equal(data.series[0].label, "Bruno");
+  assert.equal(data.series[0].hours, "5:00");
+  assert.equal(data.peak, 360);
+});
+
+test("o relatório resume as horas por pessoa da maior para a menor", () => {
+  const report = buildReport([
+    { id: 1, date: "2026-08-14", logged_hours: 1, authorName: "Ana" },
+    { id: 2, date: "2026-08-14", logged_hours: 4, authorName: "Bruno" },
+  ]);
+  assert.deepEqual(
+    report.people.map((bucket) => `${bucket.label} ${bucket.hours}`),
+    ["Bruno 4:00", "Ana 1:00"],
+  );
 });

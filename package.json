@@ -150,6 +150,11 @@
         "command": "proofhub.sort",
         "title": "%command.sort%",
         "icon": "$(list-ordered)"
+      },
+      {
+        "command": "proofhub.filterByPerson",
+        "title": "%command.filterByPerson%",
+        "icon": "$(organization)"
       }
     ],
     "menus": {
@@ -198,6 +203,11 @@
           "command": "proofhub.moveToRight",
           "when": "view == proofhub.projects",
           "group": "9_layout"
+        },
+        {
+          "command": "proofhub.filterByPerson",
+          "when": "view == proofhub.projects",
+          "group": "1_view"
         }
       ],
       "view/item/context": [

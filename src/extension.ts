@@ -63,6 +63,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (provider.filter.overdueOnly) {
       parts.push(t.filter.overdue.toLowerCase());
     }
+    if (provider.filter.people.length > 0) {
+      parts.push((provider.filter.peopleNames ?? []).join(", "));
+    }
     view.description = isActive(provider.filter) ? t.filter.active(parts.join(", ")) : undefined;
     void vscode.commands.executeCommand(
       "setContext",
@@ -330,6 +333,39 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     showFilter();
   });
 
+  command("proofhub.filterByPerson", async () => {
+    const active = await requireSession();
+    if (!active) {
+      return;
+    }
+    const people = await active.client.people().catch(() => []);
+    const picked = await vscode.window.showQuickPick(
+      people
+        .filter((person) => !person.suspended)
+        .map((person) => ({
+          label: personName(person),
+          description: person.email,
+          picked: provider.filter.people.some((id) => sameId(id, person.id)),
+          person,
+        })),
+      {
+        title: t.filter.byPerson,
+        placeHolder: t.filter.byPersonHint,
+        canPickMany: true,
+        ignoreFocusOut: true,
+      },
+    );
+    if (!picked) {
+      return;
+    }
+    provider.setFilter({
+      ...provider.filter,
+      people: picked.map((item) => item.person.id),
+      peopleNames: picked.map((item) => item.label),
+    });
+    showFilter();
+  });
+
   command("proofhub.filter", async () => {
     const options = [
       { label: t.filter.mine, detail: t.filter.mineDetail, key: "mine" as const },
@@ -339,7 +375,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         key: "hideCompleted" as const,
       },
       { label: t.filter.overdue, detail: t.filter.overdueDetail, key: "overdueOnly" as const },
-    ].map((option) => ({ ...option, picked: Boolean(provider.filter[option.key]) }));
+      { label: t.filter.byPerson, detail: t.filter.byPersonDetail, key: "byPerson" as const },
+    ].map((option) => ({
+      ...option,
+      picked:
+        option.key === "byPerson"
+          ? provider.filter.people.length > 0
+          : Boolean(provider.filter[option.key as "mine" | "hideCompleted" | "overdueOnly"]),
+    }));
 
     const picked = await vscode.window.showQuickPick(options, {
       title: t.filter.title,
@@ -358,6 +401,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       hideCompleted: chosen.has("hideCompleted"),
       overdueOnly: chosen.has("overdueOnly"),
     });
+    if (chosen.has("byPerson")) {
+      await vscode.commands.executeCommand("proofhub.filterByPerson");
+      return;
+    }
     showFilter();
   });
 

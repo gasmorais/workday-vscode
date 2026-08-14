@@ -92,6 +92,8 @@ form input[name=title], form input[name=description], form textarea { flex: 1; m
 .col-value { font-size: .72em; opacity: .75; font-variant-numeric: tabular-nums; height: 1em; }
 .col-track { width: 100%; height: 110px; display: flex; align-items: flex-end; background: var(--vscode-editorWidget-background); border-radius: 3px; }
 .col-bar { width: 100%; min-height: 2px; border-radius: 3px; background: var(--vscode-charts-blue, var(--vscode-button-background)); }
+.col-stack { width: 100%; min-height: 2px; border-radius: 3px; overflow: hidden; display: flex; flex-direction: column-reverse; }
+.piece { display: block; width: 100%; }
 .col-bar.reached { background: var(--vscode-charts-green, var(--vscode-testing-iconPassed)); }
 .col-key { font-size: .72em; opacity: .65; white-space: nowrap; }
 .goal { position: absolute; left: 0; right: 0; bottom: 0; margin-bottom: 22px; border-top: 1px dashed var(--vscode-charts-orange, var(--vscode-foreground)); opacity: .7; pointer-events: none; }

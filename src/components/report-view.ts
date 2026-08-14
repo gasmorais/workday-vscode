@@ -1,24 +1,38 @@
 import { formatMinutes, monthLabel } from "../format.js";
 import { minutesOf } from "../types.js";
 import { escapeHtml } from "../html.js";
-import type { Bucket, Report } from "../report.js";
+import type { Bucket, Grain, Report } from "../report.js";
 import { t } from "../locales/index.js";
-import { button, empty, list, section } from "./ui.js";
-import { columnChart, shareChart, weekdayLabel } from "./charts.js";
+import { button, chip, empty, list, section } from "./ui.js";
+import { columnChart, shareChart, stackedChart, weekdayLabel } from "./charts.js";
 
 export function renderReport(
   report: Report,
-  options: { onlyMine: boolean; goalMinutes?: number },
+  options: { scope: string; goalMinutes?: number },
 ): string {
   return [
     "<header>",
     `<h1>${escapeHtml(t.report.title)}</h1>`,
-    `<p class="actions">${button("toggleMine", options.onlyMine ? t.report.onlyMine : t.report.everyone)}${button(
+    `<p class="meta">${chip(options.scope, "accent")}</p>`,
+    `<p class="actions">${button("people", t.report.choosePeople, { variant: "ghost" })}${button(
+      "mine",
+      t.report.onlyMine,
+      { variant: "ghost" },
+    )}${button("everyone", t.report.everyone, { variant: "ghost" })}${button(
       "refresh",
       t.detail.refresh,
+      {
+        variant: "ghost",
+      },
     )}</p>`,
     "</header>",
     cards(report),
+    comparison(report, options.goalMinutes),
+    section(
+      t.report.people,
+      report.people.length > 0 ? String(report.people.length) : undefined,
+      report.people.length > 0 ? shareChart(report.people) : empty(t.report.noEntries),
+    ),
     section(
       t.report.days,
       undefined,
@@ -38,6 +52,30 @@ export function renderReport(
     ),
     entries(report),
   ].join("\n");
+}
+
+const GRAINS: Grain[] = ["day", "week", "month"];
+
+function comparison(report: Report, goalMinutes?: number): string {
+  const tabs = GRAINS.map((grain) =>
+    button(`grain:${grain}`, t.report.grain[grain], {
+      variant: grain === report.grain ? "primary" : "ghost",
+    }),
+  ).join("");
+  const chart = stackedChart(report.comparison, {
+    goalMinutes: report.grain === "day" ? goalMinutes : undefined,
+    labelOf: (key) =>
+      report.grain === "day"
+        ? weekdayLabel(key)
+        : report.grain === "week"
+          ? t.report.week_of(dayLabel(key))
+          : monthLabel(key),
+  });
+  return section(
+    t.report.comparison,
+    undefined,
+    `<p class="actions tabs">${tabs}</p>` + (chart || empty(t.report.noEntries)),
+  );
 }
 
 function cards(report: Report): string {
@@ -84,9 +122,9 @@ function entries(report: Report): string {
       (entry) =>
         `<li><span class="hours">${escapeHtml(formatMinutes(minutesOf(entry)))}</span><span class="grow">${escapeHtml(
           entry.description ?? "",
-        )}</span><span class="muted">${escapeHtml(entry.projectTitle ?? "")}</span><span class="muted">${escapeHtml(
-          dayLabel(entry.date ?? ""),
-        )}</span></li>`,
+        )}</span><span class="who-inline">${escapeHtml(entry.authorName ?? "")}</span><span class="muted">${escapeHtml(
+          entry.projectTitle ?? "",
+        )}</span><span class="muted">${escapeHtml(dayLabel(entry.date ?? ""))}</span></li>`,
     );
   return section(t.report.entries, String(report.entries.length), list("entries", rows));
 }

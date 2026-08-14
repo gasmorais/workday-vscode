@@ -30,5 +30,6 @@
   "config.syncOnFocus": "Reload projects and the open task whenever the VS Code window regains focus.",
   "config.dailyGoal": "Daily hours goal, in the H:MM format. It becomes the reference line of the days chart.",
   "config.cacheSeconds": "How long the tree keeps projects, lists and tasks before asking ProofHub again. Zero always asks.",
-  "config.autoRefreshMinutes": "Refresh the tree every so many minutes while the window has focus. Zero turns it off."
+  "config.autoRefreshMinutes": "Refresh the tree every so many minutes while the window has focus. Zero turns it off.",
+  "command.filterByPerson": "ProofHub: Filter by assignee"
 }

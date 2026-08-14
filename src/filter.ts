@@ -9,6 +9,8 @@ export interface TaskFilter {
   mine: boolean;
   hideCompleted: boolean;
   overdueOnly: boolean;
+  people: Id[];
+  peopleNames?: string[];
   meId?: Id;
 }
 
@@ -17,10 +19,17 @@ export const EMPTY_FILTER: TaskFilter = {
   mine: false,
   hideCompleted: false,
   overdueOnly: false,
+  people: [],
 };
 
 export function isActive(filter: TaskFilter): boolean {
-  return Boolean(filter.text.trim()) || filter.mine || filter.hideCompleted || filter.overdueOnly;
+  return (
+    Boolean(filter.text.trim()) ||
+    filter.mine ||
+    filter.hideCompleted ||
+    filter.overdueOnly ||
+    filter.people.length > 0
+  );
 }
 
 export function matches(task: Task, filter: TaskFilter, reference = new Date()): boolean {
@@ -30,6 +39,12 @@ export function matches(task: Task, filter: TaskFilter, reference = new Date()):
   if (filter.mine) {
     const mine = task.assigned ?? [];
     if (!filter.meId || !mine.some((id) => sameId(id, filter.meId))) {
+      return false;
+    }
+  }
+  if (filter.people.length > 0) {
+    const owners = task.assigned ?? [];
+    if (!owners.some((id) => filter.people.some((wanted) => sameId(id, wanted)))) {
       return false;
     }
   }

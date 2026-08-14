@@ -30,5 +30,6 @@
   "config.syncOnFocus": "Recarregar projetos e a tarefa aberta sempre que a janela do VS Code voltar ao foco.",
   "config.dailyGoal": "Meta diária de horas, no formato H:MM. Vira a linha de referência do gráfico de dias.",
   "config.cacheSeconds": "Por quanto tempo a árvore guarda projetos, listas e tarefas antes de perguntar de novo ao ProofHub. Zero sempre pergunta.",
-  "config.autoRefreshMinutes": "Atualizar a árvore a cada tantos minutos enquanto a janela estiver em foco. Zero desliga."
+  "config.autoRefreshMinutes": "Atualizar a árvore a cada tantos minutos enquanto a janela estiver em foco. Zero desliga.",
+  "command.filterByPerson": "ProofHub: Filtrar por responsável"
 }

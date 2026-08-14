@@ -1,7 +1,7 @@
 import { escapeHtml } from "../html.js";
 import { t } from "../locales/index.js";
 import { formatMinutes, toDate } from "../format.js";
-import type { Bucket } from "../report.js";
+import type { Bucket, Comparison } from "../report.js";
 
 export function columnChart(
   rows: Bucket[],
@@ -65,4 +65,49 @@ export function weekdayLabel(key: string): string {
     return key;
   }
   return `${t.calendar.weekdays[date.getUTCDay()]} ${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+export function stackedChart(
+  data: Comparison,
+  options: { goalMinutes?: number; labelOf?: (key: string) => string } = {},
+): string {
+  if (data.keys.length === 0 || data.series.length === 0) {
+    return "";
+  }
+  const goal = options.goalMinutes ?? 0;
+  const peak = Math.max(data.peak, goal, 1);
+  const columns = data.keys
+    .map((key, position) => {
+      const label = options.labelOf ? options.labelOf(key) : key;
+      const total = data.totals[position];
+      const slices = data.series
+        .map((row, index) =>
+          row.values[position] > 0
+            ? `<span class="piece tone${index % 6}" style="height:${(row.values[position] / Math.max(total, 1)) * 100}%" title="${escapeHtml(
+                `${row.label}, ${label}: ${formatMinutes(row.values[position])}`,
+              )}"></span>`
+            : "",
+        )
+        .join("");
+      return `<div class="col">
+<span class="col-value">${escapeHtml(total > 0 ? formatMinutes(total) : "")}</span>
+<div class="col-track"><div class="col-stack" style="height:${Math.round((total / peak) * 100)}%">${slices}</div></div>
+<span class="col-key">${escapeHtml(label)}</span></div>`;
+    })
+    .join("");
+  const line =
+    goal > 0
+      ? `<div class="goal" style="bottom:${Math.round((goal / peak) * 100)}%"><span>${escapeHtml(
+          formatMinutes(goal),
+        )}</span></div>`
+      : "";
+  const legend = data.series
+    .map(
+      (row, index) =>
+        `<li><span class="dot tone${index % 6}"></span><span class="grow">${escapeHtml(
+          row.label,
+        )}</span><span class="hours">${escapeHtml(row.hours)}</span></li>`,
+    )
+    .join("");
+  return `<div class="columns"><div class="plot">${line}${columns}</div></div><ul class="list legend">${legend}</ul>`;
 }
