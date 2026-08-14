@@ -109,3 +109,33 @@ test("seção que falhou explica o motivo em vez de fingir que está vazia", () 
   assert.ok(html.includes("sem acesso"));
   assert.ok(html.includes("Nenhum comentário ainda."));
 });
+
+test("o prazo vira etiqueta curta e muda de tom conforme a urgência", () => {
+  const atrasada = renderBody({
+    ...base,
+    task: { ...base.task, due_date: "2020-03-01" },
+  });
+  assert.ok(atrasada.includes("chip danger"));
+  assert.ok(atrasada.includes("atrasada"));
+  assert.ok(!atrasada.includes(">prazo 2020-03-01<"));
+
+  const concluida = renderBody({
+    ...base,
+    task: { ...base.task, due_date: "2020-03-01", completed: true },
+  });
+  assert.ok(!concluida.includes("chip danger"));
+});
+
+test("a data do lançamento aparece em dia e mês, não no formato da API", () => {
+  const html = renderBody({
+    ...base,
+    time: [{ id: 1, logged_mins: 30, date: "2026-08-14" }],
+  });
+  assert.ok(html.includes(">14/08<"));
+  assert.ok(html.includes('title="2026-08-14"'));
+});
+
+test("etiqueta vazia não vira bolinha solta", () => {
+  const html = renderBody({ ...base, assignees: [""], task: { ...base.task, due_date: null } });
+  assert.ok(!/<span class="chip[^"]*"[^>]*><\/span>/.test(html));
+});

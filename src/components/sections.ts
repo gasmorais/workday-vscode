@@ -1,7 +1,7 @@
 import { escapeHtml, richText } from "../html.js";
 import { t } from "../strings.js";
 import { estimateOf as estimateMinutes, minutesOf, type Comment, type Subtask, type Task, type TimeEntry } from "../types.js";
-import { formatMinutes, formatWhen } from "../format.js";
+import { daysUntil, formatMinutes, formatWhen, shortDate } from "../format.js";
 import { button, chip, empty, field, form, linkButton, list, section } from "./ui.js";
 
 export type LoggedEntry = TimeEntry & { authorName?: string; targetTitle?: string };
@@ -48,24 +48,47 @@ export function header(view: TaskView): string {
   ].join("");
 }
 
-function chips(view: TaskView): string {
+export function dueChip(due: string | null | undefined, completed?: boolean, now = new Date()): string {
+  if (!due) {
+    return "";
+  }
+  const days = daysUntil(due, now);
+  const label = shortDate(due, now);
+  if (completed || days === undefined) {
+    return chip(t.detail.due(label), "quiet", String(due));
+  }
+  if (days < 0) {
+    return chip(t.detail.overdue(label, -days), "danger", String(due));
+  }
+  if (days === 0) {
+    return chip(t.detail.dueToday, "warn", String(due));
+  }
+  if (days === 1) {
+    return chip(t.detail.dueTomorrow, "warn", String(due));
+  }
+  return chip(t.detail.due(label), days <= 7 ? "neutral" : "quiet", String(due));
+}
+
+function chips(view: TaskView, now = new Date()): string {
   const done = Boolean(view.task.completed);
-  const parts = [chip(done ? t.detail.status.done : t.detail.status.open, done ? "ok" : "open")];
-  if (view.assignees.length > 0) {
-    parts.push(chip(view.assignees.join(", ")));
+  const parts = [chip(done ? t.detail.status.done : t.detail.status.open, done ? "ok" : "accent")];
+  if (view.timerRunning) {
+    parts.push(chip(t.detail.timerOn, "warn"));
   }
-  if (view.task.due_date) {
-    parts.push(chip(t.detail.due(view.task.due_date)));
+  for (const person of view.assignees) {
+    parts.push(chip(person, "neutral"));
   }
+  parts.push(dueChip(view.task.due_date, done, now));
   const estimate = estimateOf(view.task);
-  if (estimate) {
-    parts.push(chip(t.detail.estimate(estimate)));
-  }
   const logged = minutesOf(view.task);
-  if (logged > 0) {
-    parts.push(chip(t.detail.logged(formatMinutes(logged))));
+  if (estimate) {
+    parts.push(chip(t.detail.estimate(estimate), "quiet"));
   }
-  return parts.join("");
+  if (logged > 0) {
+    const over = estimate ? minutesOf(view.task) > estimateMinutes(view.task) : false;
+    parts.push(chip(t.detail.logged(formatMinutes(logged)), over ? "danger" : "quiet"));
+  }
+  return parts.filter(Boolean).join("");
 }
 
 function estimateOf(task: Task): string {
@@ -92,8 +115,10 @@ export function subtasks(items: Subtask[], problem?: string): string {
         item.title,
         String(item.id),
       ).replace('class="as-link"', `class="as-link${item.completed ? " done" : ""}"`)}</span>${
-        item.due_date ? chip(item.due_date) : ""
-      }${item.assigned?.length ? chip(t.tree.people(item.assigned.length)) : ""}</li>`,
+        dueChip(item.due_date, item.completed)
+      }${minutesOf(item) > 0 ? chip(formatMinutes(minutesOf(item)), "quiet") : ""}${
+        item.assigned?.length ? chip(t.tree.people(item.assigned.length), "quiet") : ""
+      }</li>`,
   );
   const done = items.filter((item) => item.completed).length;
   return section(
@@ -118,8 +143,8 @@ export function time(entries: LoggedEntry[], problem?: string): string {
           ? `<span class="muted"> ${escapeHtml(t.detail.onSubtask(entry.targetTitle))}</span>`
           : ""
       }</span><span class="who-inline">${escapeHtml(entry.authorName ?? "")}</span>${
-        entry.status && entry.status !== "none" ? chip(t.detail.billable(entry.status)) : ""
-      }${entry.date ? chip(entry.date) : ""}</li>`,
+        entry.status === "billable" ? chip(t.detail.billableShort, "ok", t.detail.billable) : ""
+      }${chip(shortDate(entry.date), "quiet", String(entry.date ?? ""))}</li>`,
   );
   return section(
     t.detail.time,
@@ -143,8 +168,8 @@ export function time(entries: LoggedEntry[], problem?: string): string {
 export function comments(items: (Comment & { authorName?: string })[], problem?: string): string {
   const rows = items.map((item) => {
     const when = formatWhen(item.created_at);
-    return `<li><p class="who">${escapeHtml(item.authorName ?? "")}${
-      when ? chip(when) : ""
+    return `<li><p class="who">${escapeHtml(item.authorName ?? t.detail.someone)}${
+      when ? chip(when, "quiet", String(item.created_at ?? "")) : ""
     }</p><div class="prose">${richText(item.description)}</div></li>`;
   });
   return section(

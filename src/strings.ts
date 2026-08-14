@@ -144,6 +144,13 @@ export const t = {
   detail: {
     status: { open: "em aberto", done: "concluída" },
     due: (date: string) => `prazo ${date}`,
+    dueToday: "vence hoje",
+    dueTomorrow: "vence amanhã",
+    overdue: (date: string, days: number) =>
+      days === 1 ? `atrasada 1 dia, ${date}` : `atrasada ${days} dias, ${date}`,
+    timerOn: "cronômetro rodando",
+    someone: "alguém",
+    billableShort: "faturável",
     estimate: (hours: string) => `estimativa ${hours}`,
     complete: "Concluir",
     reopen: "Reabrir",
@@ -171,6 +178,6 @@ export const t = {
     logged: (hours: string) => `lançado ${hours}`,
     noNote: "sem descrição",
     onSubtask: (title: string) => `em ${title}`,
-    billable: (status: string) => (status === "billable" ? "faturável" : status),
+    billable: "Marcado como faturável no ProofHub",
   },
 };

@@ -9,8 +9,14 @@ export function empty(text: string): string {
   return `<p class="empty">${escapeHtml(text)}</p>`;
 }
 
-export function chip(text: string, tone: "" | "ok" | "open" = ""): string {
-  return `<span class="chip ${tone}">${escapeHtml(text)}</span>`;
+export type Tone = "neutral" | "quiet" | "accent" | "ok" | "warn" | "danger";
+
+export function chip(text: string, tone: Tone = "neutral", title?: string): string {
+  if (!text) {
+    return "";
+  }
+  const hint = title ? ` title="${escapeHtml(title)}"` : "";
+  return `<span class="chip ${tone}"${hint}>${escapeHtml(text)}</span>`;
 }
 
 export function button(action: string, label: string, id?: string | number): string {
