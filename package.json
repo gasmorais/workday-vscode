@@ -9,7 +9,9 @@
   "engines": {
     "vscode": "^1.90.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "main": "./out/extension.js",
   "activationEvents": [],
   "contributes": {
@@ -37,29 +39,98 @@
       }
     ],
     "commands": [
-      { "command": "proofhub.connect", "title": "ProofHub: Connect", "icon": "$(plug)" },
-      { "command": "proofhub.disconnect", "title": "ProofHub: Disconnect" },
-      { "command": "proofhub.refresh", "title": "ProofHub: Refresh", "icon": "$(refresh)" },
-      { "command": "proofhub.createTask", "title": "ProofHub: New Task", "icon": "$(add)" },
-      { "command": "proofhub.completeTask", "title": "ProofHub: Complete Task", "icon": "$(check)" },
-      { "command": "proofhub.comment", "title": "ProofHub: Add Comment", "icon": "$(comment)" },
-      { "command": "proofhub.openInBrowser", "title": "ProofHub: Open in Browser", "icon": "$(link-external)" },
-      { "command": "proofhub.startTimer", "title": "ProofHub: Start Timer", "icon": "$(play)" },
-      { "command": "proofhub.stopTimer", "title": "ProofHub: Stop Timer and Log Time", "icon": "$(stop)" },
-      { "command": "proofhub.logTime", "title": "ProofHub: Log Time" },
-      { "command": "proofhub.myTasks", "title": "ProofHub: My Tasks" }
+      {
+        "command": "proofhub.connect",
+        "title": "ProofHub: Connect",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "proofhub.disconnect",
+        "title": "ProofHub: Disconnect"
+      },
+      {
+        "command": "proofhub.refresh",
+        "title": "ProofHub: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "proofhub.createTask",
+        "title": "ProofHub: New Task",
+        "icon": "$(add)"
+      },
+      {
+        "command": "proofhub.completeTask",
+        "title": "ProofHub: Complete Task",
+        "icon": "$(check)"
+      },
+      {
+        "command": "proofhub.comment",
+        "title": "ProofHub: Add Comment",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "proofhub.openInBrowser",
+        "title": "ProofHub: Open in Browser",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "proofhub.startTimer",
+        "title": "ProofHub: Start Timer",
+        "icon": "$(play)"
+      },
+      {
+        "command": "proofhub.stopTimer",
+        "title": "ProofHub: Stop Timer and Log Time",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "proofhub.logTime",
+        "title": "ProofHub: Log Time"
+      },
+      {
+        "command": "proofhub.myTasks",
+        "title": "ProofHub: My Tasks"
+      }
     ],
     "menus": {
       "view/title": [
-        { "command": "proofhub.createTask", "when": "view == proofhub.projects", "group": "navigation@1" },
-        { "command": "proofhub.refresh", "when": "view == proofhub.projects", "group": "navigation@2" }
+        {
+          "command": "proofhub.createTask",
+          "when": "view == proofhub.projects",
+          "group": "navigation@1"
+        },
+        {
+          "command": "proofhub.refresh",
+          "when": "view == proofhub.projects",
+          "group": "navigation@2"
+        }
       ],
       "view/item/context": [
-        { "command": "proofhub.completeTask", "when": "view == proofhub.projects && viewItem == task", "group": "inline@1" },
-        { "command": "proofhub.startTimer", "when": "view == proofhub.projects && viewItem == task", "group": "inline@2" },
-        { "command": "proofhub.comment", "when": "view == proofhub.projects && viewItem == task", "group": "1_actions" },
-        { "command": "proofhub.logTime", "when": "view == proofhub.projects && viewItem == task", "group": "1_actions" },
-        { "command": "proofhub.openInBrowser", "when": "view == proofhub.projects", "group": "2_open" }
+        {
+          "command": "proofhub.completeTask",
+          "when": "view == proofhub.projects && viewItem == task",
+          "group": "inline@1"
+        },
+        {
+          "command": "proofhub.startTimer",
+          "when": "view == proofhub.projects && viewItem == task",
+          "group": "inline@2"
+        },
+        {
+          "command": "proofhub.comment",
+          "when": "view == proofhub.projects && viewItem == task",
+          "group": "1_actions"
+        },
+        {
+          "command": "proofhub.logTime",
+          "when": "view == proofhub.projects && viewItem == task",
+          "group": "1_actions"
+        },
+        {
+          "command": "proofhub.openInBrowser",
+          "when": "view == proofhub.projects",
+          "group": "2_open"
+        }
       ]
     },
     "configuration": {
@@ -92,6 +163,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.9.2",
     "typescript": "^5.6.0"
   }
 }
