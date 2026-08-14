@@ -20,6 +20,7 @@ export const GRAPH_SCOPES = [
 
 export const SECRET_TEAMS_REFRESH = "proofhub.teams.refreshToken";
 export const SECRET_TEAMS_LOCAL = "proofhub.teams.localToken";
+export const STATE_CALL_LOG = "proofhub.teams.callLog";
 export const STATE_TEAMS_WATCH = "proofhub.teams.watchCalls";
 export const STATE_TEAMS_FAVORITES = "proofhub.teams.favorites";
 

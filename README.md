@@ -45,6 +45,7 @@ Read [docs/teams-setup.md](docs/teams-setup.md) for the sign-in and the local AP
 - **Today's meetings** from the calendar, with a join button that opens Teams.
 - **Live call state** in the status bar, showing elapsed time, mute and screen share.
 - **Call to hours**: when a call ends, the extension offers to log it against one of your open ProofHub tasks.
+- **Call history** under Calls in the Teams view, kept for seven days, with a badge counting the ones you have not logged yet.
 
 Call tracking works without any Azure application. It prefers the Teams local API and falls back to reading the Teams window titles on macOS, which needs nothing but the Accessibility permission. Run `Workday: Track Teams Calls` to turn it on.
 

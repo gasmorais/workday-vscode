@@ -76,6 +76,10 @@ Both sources feed the same tracker, so running them together is safe.
 
 ## Call to hours
 
+Every finished call is written to a local history, kept for seven days and capped at two hundred entries. The Teams view lists them under Calls, newest first, with the time range, the duration and the meeting name. A hollow circle means the call is still waiting to be logged, a filled check means it is done and shows the hours and the task in the tooltip. The view badge counts what is still pending, so a dismissed notification is never a lost call.
+
+Logging can start from three places: the notification when the call ends, a click on the call in the list, or the command, which asks which pending call to log. Discard removes a call from the history without logging it.
+
 While a call runs, a status bar entry shows the elapsed time and whether you are muted or sharing. When the call ends, the extension asks whether to log it. Accepting opens the picker of your open ProofHub tasks, then the usual timesheet and description prompts.
 
 Calls shorter than two minutes are ignored. The logged duration is rounded to the nearest `proofhub.teams.roundMinutes` block, five minutes by default, with a five minute floor.

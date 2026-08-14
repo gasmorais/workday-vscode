@@ -213,6 +213,12 @@ export const ptBR = {
       `Ninguém está atribuído a ${kind}, então ela não aparece na fila de nenhuma pessoa.`,
   },
   teams: {
+    callWithoutName: "Call sem nome",
+    callPending: "Ainda nao lancada. Clique para lancar em uma tarefa.",
+    callLogged: (hours: string, task: string) => `Lancada: ${hours} em ${task}`,
+    callsGroup: (total: string) => `Calls (${total})`,
+    noPendingCalls: "Nenhuma call pendente de lancamento.",
+    pendingBadge: (count: number) => `${count} call(s) sem lancamento`,
     openPrivacy: "Abrir Ajustes do Sistema",
     callsSeeing: (title: string) =>
       `Voce esta em call${title ? ` (${title})` : ""}. O tempo ja esta correndo.`,

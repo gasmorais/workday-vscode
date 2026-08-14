@@ -2,10 +2,13 @@ import * as vscode from "vscode";
 import { STATE_TEAMS_FAVORITES } from "../constants.js";
 import { t } from "../locales/index.js";
 import { formatWhen } from "../format.js";
+import { formatDuration } from "../time.js";
 import { meetingWhen, toRows, type ChatRow } from "./chats.js";
+import { rangeOf, totalMinutes, type CallRecord } from "./call-log.js";
 import type { CalendarEvent, GraphClient } from "./graph.js";
 
 export type TeamsNode =
+  | { kind: "call"; record: CallRecord }
   | { kind: "chat"; row: ChatRow }
   | { kind: "meeting"; event: CalendarEvent }
   | { kind: "group"; label: string; children: TeamsNode[] };
@@ -17,7 +20,10 @@ export class TeamsProvider implements vscode.TreeDataProvider<TeamsNode> {
   private myId: string | undefined;
   private cache: TeamsNode[] | undefined;
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly calls: () => CallRecord[],
+  ) {}
 
   setClient(client: GraphClient | undefined, myId?: string): void {
     this.client = client;
@@ -48,6 +54,27 @@ export class TeamsProvider implements vscode.TreeDataProvider<TeamsNode> {
   }
 
   getTreeItem(node: TeamsNode): vscode.TreeItem {
+    if (node.kind === "call") {
+      const item = new vscode.TreeItem(
+        node.record.title ?? t.teams.callWithoutName,
+        vscode.TreeItemCollapsibleState.None,
+      );
+      const spent = formatDuration(node.record.endedAt - node.record.startedAt);
+      item.description = `${rangeOf(node.record)} (${spent})`;
+      item.iconPath = new vscode.ThemeIcon(
+        node.record.loggedHours ? "pass-filled" : "circle-large-outline",
+      );
+      item.contextValue = node.record.loggedHours ? "teamsCallLogged" : "teamsCallPending";
+      item.tooltip = new vscode.MarkdownString(
+        node.record.loggedHours
+          ? t.teams.callLogged(node.record.loggedHours, node.record.taskTitle ?? "")
+          : t.teams.callPending,
+      );
+      item.command = node.record.loggedHours
+        ? undefined
+        : { command: "proofhub.teams.logCall", title: t.teams.callLog, arguments: [node] };
+      return item;
+    }
     if (node.kind === "group") {
       const item = new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.Expanded);
       item.contextValue = "teamsGroup";
@@ -88,12 +115,26 @@ export class TeamsProvider implements vscode.TreeDataProvider<TeamsNode> {
       return node.kind === "group" ? node.children : [];
     }
     if (!this.client) {
-      return [];
+      return this.callGroups();
     }
     if (this.cache) {
       return this.cache;
     }
     return this.build(this.client);
+  }
+
+  private callGroups(): TeamsNode[] {
+    const records = this.calls();
+    if (records.length === 0) {
+      return [];
+    }
+    return [
+      {
+        kind: "group",
+        label: t.teams.callsGroup(formatDuration(totalMinutes(records) * 60_000)),
+        children: records.map((record) => ({ kind: "call", record })),
+      },
+    ];
   }
 
   private async build(client: GraphClient): Promise<TeamsNode[]> {
@@ -102,7 +143,7 @@ export class TeamsProvider implements vscode.TreeDataProvider<TeamsNode> {
       this.todaysMeetings(client).catch(() => []),
     ]);
     const rows = toRows(chats, this.favorites, this.myId);
-    const groups: TeamsNode[] = [];
+    const groups: TeamsNode[] = this.callGroups();
     if (meetings.length > 0) {
       groups.push({
         kind: "group",

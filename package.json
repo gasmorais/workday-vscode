@@ -214,6 +214,12 @@
         "command": "proofhub.teams.diagnoseCalls",
         "title": "%command.teams.diagnoseCalls%",
         "category": "Workday"
+      },
+      {
+        "command": "proofhub.teams.discardCall",
+        "title": "%command.teams.discardCall%",
+        "category": "Workday",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -324,6 +330,16 @@
           "command": "proofhub.teams.joinMeeting",
           "when": "view == proofhub.teams && viewItem == teamsMeetingJoin",
           "group": "inline@1"
+        },
+        {
+          "command": "proofhub.teams.logCall",
+          "when": "view == proofhub.teams && viewItem == teamsCallPending",
+          "group": "inline@1"
+        },
+        {
+          "command": "proofhub.teams.discardCall",
+          "when": "view == proofhub.teams && viewItem == teamsCallPending",
+          "group": "inline@2"
         }
       ]
     },

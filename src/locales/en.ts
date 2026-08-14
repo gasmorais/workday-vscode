@@ -214,6 +214,12 @@ export const en: Strings = {
       `Nobody is assigned to ${kind}, so it shows up in no one's queue.`,
   },
   teams: {
+    callWithoutName: "Unnamed call",
+    callPending: "Not logged yet. Click to log it against a task.",
+    callLogged: (hours: string, task: string) => `Logged: ${hours} on ${task}`,
+    callsGroup: (total: string) => `Calls (${total})`,
+    noPendingCalls: "No calls waiting to be logged.",
+    pendingBadge: (count: number) => `${count} call(s) not logged`,
     openPrivacy: "Open System Settings",
     callsSeeing: (title: string) =>
       `You are in a call${title ? ` (${title})` : ""}. The clock is running.`,

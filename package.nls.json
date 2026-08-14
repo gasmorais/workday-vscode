@@ -49,5 +49,6 @@
   "command.teams.stopCalls": "Stop Tracking Teams Calls",
   "config.teams.macPollSeconds": "How often to check the Teams windows for a call, in seconds. macOS only.",
   "config.teams.callWindowPattern": "Regular expression matching a Teams window title that means a call is running. Leave empty for the built-in pattern.",
-  "command.teams.diagnoseCalls": "Diagnose Call Tracking"
+  "command.teams.diagnoseCalls": "Diagnose Call Tracking",
+  "command.teams.discardCall": "Discard Call"
 }

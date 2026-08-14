@@ -19,15 +19,21 @@ import { ChatPanel } from "./teams/chat-panel.js";
 import { TeamsLocalApi } from "./teams/local-api.js";
 import { MacCallWatcher } from "./teams/mac-calls.js";
 import {
-  CallTracker,
-  roundedHours,
-  type CallSession,
-  type MeetingState,
-} from "./teams/call-tracker.js";
+  add as addCall,
+  drop as dropCall,
+  idOf,
+  mark as markCall,
+  pending as pendingCalls,
+  since as callsSince,
+  rangeOf,
+  type CallRecord,
+} from "./teams/call-log.js";
+import { CallTracker, roundedHours, type MeetingState } from "./teams/call-tracker.js";
 import {
   CONFIG_SECTION,
   FOCUS_SYNC_DEBOUNCE_MS,
   HOURS_PATTERN,
+  STATE_CALL_LOG,
   STATE_TEAMS_WATCH,
 } from "./constants.js";
 
@@ -629,7 +635,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   });
 
   const teamsAuth = new TeamsAuth(context);
-  const teamsProvider = new TeamsProvider(context);
+  const readCalls = (): CallRecord[] =>
+    callsSince(context.globalState.get<CallRecord[]>(STATE_CALL_LOG) ?? [], 7, Date.now());
+  const writeCalls = async (records: CallRecord[]): Promise<void> => {
+    await context.globalState.update(STATE_CALL_LOG, records);
+    teamsProvider.refresh();
+  };
+  const teamsProvider = new TeamsProvider(context, readCalls);
   let graph: GraphClient | undefined;
   const chatPanel = new ChatPanel(
     () => graph,
@@ -714,7 +726,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const tracker = new CallTracker();
   const callWatch = new TeamsLocalApi(context);
   context.subscriptions.push(callWatch);
-  let lastCall: CallSession | undefined;
   let callTitle: string | undefined;
 
   const paintCall = (state: MeetingState | undefined) => {
@@ -739,8 +750,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!finished) {
       return;
     }
-    lastCall = finished;
     callBar.hide();
+    const record: CallRecord = {
+      id: idOf(finished.startedAt),
+      startedAt: finished.startedAt,
+      endedAt: finished.endedAt,
+      minutes: finished.minutes,
+      title: callTitle,
+    };
+    await writeCalls(addCall(context.globalState.get<CallRecord[]>(STATE_CALL_LOG) ?? [], record));
+    pendingBadge();
     const elapsed = formatDuration(finished.endedAt - finished.startedAt);
     const answer = await vscode.window.showInformationMessage(
       t.teams.callEnded(elapsed),
@@ -748,8 +767,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       t.teams.callSkip,
     );
     if (answer === t.teams.callLog) {
-      await vscode.commands.executeCommand("proofhub.teams.logCall");
+      await vscode.commands.executeCommand("proofhub.teams.logCall", { kind: "call", record });
     }
+  };
+
+  const pendingBadge = () => {
+    const open = pendingCalls(readCalls()).length;
+    teamsView.badge = open > 0 ? { value: open, tooltip: t.teams.pendingBadge(open) } : undefined;
   };
 
   const macWatch = new MacCallWatcher();
@@ -764,26 +788,67 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     macWatch.onProblem((reason) => vscode.window.showWarningMessage(reason)),
   );
 
-  command("proofhub.teams.logCall", async () => {
+  const pickCall = async (): Promise<CallRecord | undefined> => {
+    const open = pendingCalls(readCalls());
+    if (open.length === 0) {
+      vscode.window.showInformationMessage(t.teams.noPendingCalls);
+      return undefined;
+    }
+    if (open.length === 1) {
+      return open[0];
+    }
+    const picked = await vscode.window.showQuickPick(
+      open.map((record) => ({
+        label: record.title ?? t.teams.callWithoutName,
+        description: `${rangeOf(record)} (${formatDuration(record.endedAt - record.startedAt)})`,
+        record,
+      })),
+      { title: t.teams.callTask, ignoreFocusOut: true },
+    );
+    return picked?.record;
+  };
+
+  command("proofhub.teams.logCall", async (node?: TeamsNode) => {
     const active = await requireSession();
-    const call = lastCall;
-    if (!active || !call) {
+    if (!active) {
       return;
     }
-    const node = await pickMyTask(active, t.teams.callTask);
-    if (!node || node.kind !== "task") {
+    const call = node?.kind === "call" ? node.record : await pickCall();
+    if (!call) {
       return;
     }
+    const target = await pickMyTask(active, t.teams.callTask);
+    if (!target || target.kind !== "task") {
+      return;
+    }
+    const hours = roundedHours(call.minutes);
     await logTimeFor(
       active,
-      { projectId: node.project.id, todolistId: node.todolist.id, taskId: node.task.id },
-      node.task.title,
-      roundedHours(call.minutes),
-      callTitle ? t.teams.callWith(callTitle) : undefined,
+      { projectId: target.project.id, todolistId: target.todolist.id, taskId: target.task.id },
+      target.task.title,
+      hours,
+      call.title ? t.teams.callWith(call.title) : undefined,
     );
-    lastCall = undefined;
-    callTitle = undefined;
-    detail.refreshIfShowing(node.task.id);
+    await writeCalls(
+      markCall(
+        context.globalState.get<CallRecord[]>(STATE_CALL_LOG) ?? [],
+        call.id,
+        hours,
+        target.task.title,
+      ),
+    );
+    pendingBadge();
+    detail.refreshIfShowing(target.task.id);
+  });
+
+  command("proofhub.teams.discardCall", async (node?: TeamsNode) => {
+    if (node?.kind !== "call") {
+      return;
+    }
+    await writeCalls(
+      dropCall(context.globalState.get<CallRecord[]>(STATE_CALL_LOG) ?? [], node.record.id),
+    );
+    pendingBadge();
   });
 
   context.subscriptions.push(
