@@ -69,8 +69,8 @@ export class ProjectsProvider implements vscode.TreeDataProvider<Node> {
         item.description = taskDescription(node.task);
         item.tooltip = node.task.description;
         item.command = {
-          command: "proofhub.openInBrowser",
-          title: "Open in Browser",
+          command: "proofhub.openTask",
+          title: "Open Task",
           arguments: [node],
         };
         return item;

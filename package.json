@@ -54,6 +54,11 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "proofhub.openTask",
+        "title": "ProofHub: Open Task",
+        "icon": "$(preview)"
+      },
+      {
         "command": "proofhub.createTask",
         "title": "ProofHub: New Task",
         "icon": "$(add)"
@@ -98,6 +103,10 @@
       {
         "command": "proofhub.changeAccount",
         "title": "ProofHub: Change Account"
+      },
+      {
+        "command": "proofhub.moveToRight",
+        "title": "ProofHub: Move Panel to the Right Sidebar"
       }
     ],
     "menus": {
@@ -114,6 +123,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "proofhub.openTask",
+          "when": "view == proofhub.projects && viewItem == task",
+          "group": "1_actions@0"
+        },
         {
           "command": "proofhub.completeTask",
           "when": "view == proofhub.projects && viewItem == task",
@@ -163,6 +177,16 @@
           "type": "string",
           "default": "bapplite/#app/me/api",
           "description": "Path of the API access page, opened by Connect. Adjust if ProofHub moves it."
+        },
+        "proofhub.openOnRight": {
+          "type": "boolean",
+          "default": true,
+          "description": "Move the ProofHub panel to the right sidebar the first time it opens."
+        },
+        "proofhub.syncOnFocus": {
+          "type": "boolean",
+          "default": true,
+          "description": "Refresh projects and the open task whenever the VS Code window regains focus."
         }
       }
     }

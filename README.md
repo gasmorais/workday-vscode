@@ -31,11 +31,30 @@ O e-mail de contato exigido pelo cabeçalho `User-Agent` é preenchido sozinho a
 | `ProofHub: Stop Timer and Log Time` | parar e lançar as horas no timesheet do projeto |
 | `ProofHub: Log Time` | lançar horas manualmente, no formato `H:MM` |
 | `ProofHub: My Tasks` | listar suas tarefas abertas em todos os projetos |
+| `ProofHub: Open Task` | abrir a tarefa no painel de detalhe, à direita |
 | `ProofHub: Open in Browser` | abrir o item no ProofHub |
 | `ProofHub: Open Link from URL` | colar um link do ProofHub e revelar o item na árvore |
 | `ProofHub: Change Account` | conectar em outra conta |
+| `ProofHub: Move Panel to the Right Sidebar` | reposicionar a árvore |
 
-A barra lateral mostra projetos, listas e tarefas, com prazo e contagem de subtarefas ao lado do título.
+## Layout
+
+A árvore vai para a **barra lateral direita** na primeira vez que abre, deixando o explorador de arquivos à esquerda intacto. Quem preferir o contrário desliga em `proofhub.openOnRight` e arrasta de volta, ou usa `ProofHub: Move Panel to the Right Sidebar` para refazer.
+
+Clicar numa tarefa abre o **painel de detalhe ao lado do código**, não no navegador. Nele dá para, sem sair do editor:
+
+- ler descrição, responsáveis, prazo e estimativa;
+- concluir e reabrir a tarefa;
+- ver as subtarefas com o progresso `feitas/total`, marcar cada uma e criar novas;
+- ler a thread de comentários com autor e data, e comentar ali mesmo (`Cmd+Enter` envia);
+- ver as horas já lançadas com o total somado, e lançar mais;
+- iniciar e parar o cronômetro.
+
+O painel é único: abrir outra tarefa reaproveita a mesma aba em vez de encher o editor.
+
+## Sincronização
+
+Toda ação feita no painel recarrega a tarefa e invalida só o galho afetado da árvore, então o que você vê é o que o ProofHub tem, sem varrer a conta inteira. Ao voltar o foco para a janela do VS Code, projetos e tarefa aberta são recarregados, para pegar o que a equipe mexeu no navegador. Isso é o `proofhub.syncOnFocus`, que dá para desligar em conexão ruim.
 
 ## Links
 

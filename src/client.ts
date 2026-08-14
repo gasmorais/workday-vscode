@@ -4,6 +4,7 @@ import type {
   Comment,
   Person,
   Project,
+  Subtask,
   Task,
   TimeEntry,
   Todolist,
@@ -182,6 +183,51 @@ export class ProofHubClient {
       `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/comments`,
       { content },
     );
+  }
+
+  task(projectId: string, todolistId: string, taskId: string): Promise<Task> {
+    return this.request<Task>(
+      "GET",
+      `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}`,
+    );
+  }
+
+  subtasks(projectId: string, todolistId: string, taskId: string): Promise<Subtask[]> {
+    return this.request<Subtask[]>(
+      "GET",
+      `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/subtasks`,
+    );
+  }
+
+  createSubtask(
+    projectId: string,
+    todolistId: string,
+    taskId: string,
+    subtask: Partial<Subtask>,
+  ): Promise<Subtask> {
+    return this.request<Subtask>(
+      "POST",
+      `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/subtasks`,
+      subtask,
+    );
+  }
+
+  updateSubtask(
+    projectId: string,
+    todolistId: string,
+    taskId: string,
+    subtaskId: string,
+    changes: Partial<Subtask>,
+  ): Promise<Subtask> {
+    return this.request<Subtask>(
+      "PUT",
+      `projects/${projectId}/todolists/${todolistId}/tasks/${taskId}/subtasks/${subtaskId}`,
+      changes,
+    );
+  }
+
+  timeEntries(projectId: string, timesheetId: string): Promise<TimeEntry[]> {
+    return this.request<TimeEntry[]>("GET", `projects/${projectId}/timesheets/${timesheetId}/time`);
   }
 
   timesheets(projectId: string): Promise<{ id: string; title: string }[]> {

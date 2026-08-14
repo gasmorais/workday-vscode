@@ -5,6 +5,7 @@ import { Timer } from "./timer.js";
 import { formatDuration, today } from "./time.js";
 import { personName, type Task } from "./types.js";
 import { parseAppUrl } from "./urls.js";
+import { TaskDetail } from "./detail.js";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const provider = new ProjectsProvider();
@@ -14,6 +15,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const view = vscode.window.createTreeView("proofhub.projects", { treeDataProvider: provider });
   context.subscriptions.push(view);
+
+  const detail = new TaskDetail({
+    session: () => session,
+    onChanged: (node) => provider.refresh(provider.getParent(node)),
+    timerRunsOn: (taskId) => timer.running?.taskId === taskId,
+    startTimer: (node) => vscode.commands.executeCommand("proofhub.startTimer", node),
+    stopTimer: () => vscode.commands.executeCommand("proofhub.stopTimer"),
+    openInBrowser: (node) => vscode.commands.executeCommand("proofhub.openInBrowser", node),
+  });
 
   const requireSession = async (): Promise<Session | undefined> => {
     if (session) {
@@ -36,6 +46,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       vscode.commands.registerCommand(name, (...args: never[]) => guard(() => run(...args))()),
     );
 
+  command("proofhub.moveToRight", async () => {
+    await moveViewToRight();
+  });
+
+  if (
+    vscode.workspace.getConfiguration("proofhub").get<boolean>("openOnRight", true) &&
+    !context.globalState.get<boolean>("movedToRight")
+  ) {
+    await context.globalState.update("movedToRight", true);
+    void moveViewToRight();
+  }
+
   command("proofhub.connect", async () => {
     const created = await connect(context);
     if (created) {
@@ -52,7 +74,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   command("proofhub.refresh", async () => {
     provider.refresh();
+    const open = detail.taskId;
+    if (open) {
+      detail.refreshIfShowing(open);
+    }
   });
+
+  command("proofhub.openTask", async (node: Node) => {
+    if (node?.kind === "task") {
+      await detail.show(node);
+    }
+  });
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeWindowState((state) => {
+      if (!state.focused || !session) {
+        return;
+      }
+      if (!vscode.workspace.getConfiguration("proofhub").get<boolean>("syncOnFocus", true)) {
+        return;
+      }
+      provider.refresh();
+      const open = detail.taskId;
+      if (open) {
+        detail.refreshIfShowing(open);
+      }
+    }),
+  );
 
   command("proofhub.openInBrowser", async (node: Node) => {
     const active = await requireSession();
@@ -177,7 +225,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     await active.client.createTask(project.id, todolist.id, payload);
-    provider.refresh();
+    provider.refresh(target.kind === "todolist" ? target : provider.getParent(target));
     vscode.window.showInformationMessage(`Task created in ${todolist.title}.`);
   });
 
@@ -187,7 +235,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     await active.client.completeTask(node.project.id, node.todolist.id, node.task.id);
-    provider.refresh();
+    provider.refresh(provider.getParent(node));
+    detail.refreshIfShowing(node.task.id);
     vscode.window.showInformationMessage(`Completed ${node.task.title}.`);
   });
 
@@ -206,6 +255,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     await active.client.addComment(node.project.id, node.todolist.id, node.task.id, content.trim());
+    detail.refreshIfShowing(node.task.id);
     vscode.window.showInformationMessage("Comment posted.");
   });
 
@@ -226,6 +276,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       title: node.task.title,
       startedAt: Date.now(),
     });
+    detail.refreshIfShowing(node.task.id);
   });
 
   command("proofhub.stopTimer", async () => {
@@ -241,6 +292,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const hours = formatDuration(Date.now() - running.startedAt);
     await logTimeFor(active, running.projectId, running.taskId, running.title, hours);
     await timer.stop();
+    detail.refreshIfShowing(running.taskId);
   });
 
   command("proofhub.logTime", async (node: Node) => {
@@ -259,6 +311,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     await logTimeFor(active, node.project.id, node.task.id, node.task.title, hours.trim());
+    detail.refreshIfShowing(node.task.id);
   });
 
   command("proofhub.myTasks", async () => {
@@ -313,9 +366,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       matchOnDescription: true,
     });
     if (picked) {
-      await vscode.commands.executeCommand("proofhub.openInBrowser", picked.node);
+      await detail.show(picked.node);
     }
   });
+}
+
+async function moveViewToRight(): Promise<void> {
+  await vscode.commands.executeCommand("proofhub.projects.focus");
+  const available = new Set(await vscode.commands.getCommands(true));
+  const move = [
+    "workbench.action.moveFocusedViewToSecondarySideBar",
+    "workbench.action.moveViewToSecondarySideBar",
+  ].find((id) => available.has(id));
+  if (!move) {
+    vscode.window.showInformationMessage(
+      "This VS Code build has no command to move a view. Drag the ProofHub icon to the right sidebar once.",
+    );
+    return;
+  }
+  await vscode.commands.executeCommand(move);
+  await vscode.commands.executeCommand("proofhub.projects.focus");
 }
 
 function idMatches(candidate: string, wanted: string): boolean {

@@ -35,6 +35,14 @@ export interface Task {
   url?: string;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  completed?: boolean;
+  assigned?: string[];
+  due_date?: string;
+}
+
 export interface Comment {
   id: string;
   content: string;
